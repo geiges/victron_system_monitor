@@ -1,0 +1,10 @@
+[project]
+name = "victron-system-monitor"
+version = "0.1.0"
+description = "Python software to be un on Venus OS to log available solar, inverter and battery data and run a simplified battery model"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas",
+    "pydbus"
+    ]

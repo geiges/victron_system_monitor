@@ -127,9 +127,9 @@ def update_loop(debug=False):
                 print(row)
                 print(now.strftime("%H:%M:%S"))
             writer.writerow(row)
-            print(f".done in {time.time() - now:2.2f}s")
+            print(f".done in {(datetime.now(tz=timezone) - now).total_seconds():2.2f}s")
 
-        t_calc =  now = datetime.now(tz=timezone) -now
+        t_calc =  datetime.now(tz=timezone) - now
         #t_calc = time.time() - now
         time.sleep(config.log_interval - t_calc.total_seconds())
 

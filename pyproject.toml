@@ -5,6 +5,6 @@ description = "Python software to be un on Venus OS to log available solar, inve
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pandas",
+#    "pandas",
     "pydbus",
 ]

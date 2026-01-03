@@ -14,7 +14,7 @@ import config_default as config
 from csv import DictWriter
 from pydbus import SystemBus
     
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 timezone = pytz.timezone(config.tz)
@@ -82,7 +82,7 @@ def update_loop(debug=False):
 
     # wait until next full interval before first sync
     if not debug:
-        time.sleep(config.log_interval - (time.localtime().tm_sec % config.log_interval))
+        time.sleep(config.log_interval - (now % timedelta(config.log_interval).total_seconds()))
 
     while True:
         now = datetime.now(tz=timezone) # current date and time
@@ -129,8 +129,9 @@ def update_loop(debug=False):
             writer.writerow(row)
             print(f".done in {time.time() - now:2.2f}s")
 
-        t_calc = time.time() - now
-        time.sleep(config.log_interval - t_calc)
+        t_calc =  now = datetime.now(tz=timezone) -now
+        #t_calc = time.time() - now
+        time.sleep(config.log_interval - t_calc.total_seconds())
 
 
 

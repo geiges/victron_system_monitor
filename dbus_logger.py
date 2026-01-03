@@ -90,44 +90,50 @@ def update_loop(debug=False):
         now_str = now.strftime("%H:%M:%S")
         date_str =  now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
-
-        data = retrieve_data(bus, config.variables_to_log, debug)
-        
-        with open(filename, mode="a") as f:
-            writer = DictWriter(f, fieldnames)
-            if date_str != old_date_str:
-                # new file was started we need to output the header
-                writer.writeheader()
-                old_date_str = date_str
-
-            row = dict(time=now_str)
-
-            # state = 0
-
-            for var, value in data:
-           
-                
-                if var not in config.non_numeric_var:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        value = ""
-                row[var] = value
-
-                # if var in status_mapping:
-                #     exp = status_vars.index(var)
-                #     if value not in status_mapping[var].keys():
-                #         print(f"{var, value} not found")
-                #     state_part = status_mapping[var][value]
-                #     state += state_part * (10**exp)
-
-            # code = str(state).zfill(len(status_vars))
-            # row["status"] = code
+        try:
+            data = retrieve_data(bus, config.variables_to_log, debug)
+        except Exception as E:
+            data = None
             if debug:
-                print(row)
-                print(now.strftime("%H:%M:%S"))
-            writer.writerow(row)
-            print(f".done in {(datetime.now(tz=timezone) - now).total_seconds():2.2f}s")
+                print(f"Exception {E} was raised.")
+                print("Skipping this update loop")
+        
+        if data is not None:
+            with open(filename, mode="a") as f:
+                writer = DictWriter(f, fieldnames)
+                if date_str != old_date_str:
+                    # new file was started we need to output the header
+                    writer.writeheader()
+                    old_date_str = date_str
+    
+                row = dict(time=now_str)
+    
+                # state = 0
+    
+                for var, value in data:
+               
+                    
+                    if var not in config.non_numeric_var:
+                        try:
+                            value = float(value)
+                        except ValueError:
+                            value = ""
+                    row[var] = value
+    
+                    # if var in status_mapping:
+                    #     exp = status_vars.index(var)
+                    #     if value not in status_mapping[var].keys():
+                    #         print(f"{var, value} not found")
+                    #     state_part = status_mapping[var][value]
+                    #     state += state_part * (10**exp)
+    
+                # code = str(state).zfill(len(status_vars))
+                # row["status"] = code
+                if debug:
+                    print(row)
+                    print(now.strftime("%H:%M:%S"))
+                writer.writerow(row)
+                print(f".done in {(datetime.now(tz=timezone) - now).total_seconds():2.2f}s")
 
         t_calc =  datetime.now(tz=timezone) - now
         #t_calc = time.time() - now

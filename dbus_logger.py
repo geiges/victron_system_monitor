@@ -15,11 +15,15 @@ from csv import DictWriter
 from pydbus import SystemBus
     
 from datetime import datetime
+import pytz
+
+timezone = pytz.timezone(config.tz)
+
 
 
 def update_existing_file(filename: str, fieldnames: list[str]) -> str:
 
-    now = datetime.now() # current date and time
+    now = datetime.now(tz=timezone) # current date and time
 
     date_str = now.strftime(config.date_format)
 
@@ -70,7 +74,7 @@ def update_loop(debug=False):
         
     now = time.time()
     
-    date_str = time.strftime("%y-%m-%d", time.localtime(now))
+    date_str = now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"
     old_date_str = update_existing_file(filename, fieldnames)
 
@@ -79,9 +83,10 @@ def update_loop(debug=False):
         time.sleep(config.log_interval - (time.localtime().tm_sec % config.log_interval))
 
     while True:
-        now = time.time()
-        now_str = time.strftime("%H:%M:%S", time.localtime(now))
-        date_str = time.strftime("%y-%m-%d", time.localtime(now))
+        now = datetime.now(tz=timezone) # current date and time
+
+        now_str = now.strftime("%H:%M:%S")
+        date_str =  now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
 
         data = retrieve_data(bus, config.variables_to_log)
@@ -118,7 +123,7 @@ def update_loop(debug=False):
             # row["status"] = code
             if debug:
                 print(row)
-                print(time.time())
+                print(now.strftime("%H:%M:%S"))
             writer.writerow(row)
             print(f".done in {time.time() - now:2.2f}s")
 

@@ -9,6 +9,7 @@ Created on Fri Jan  2 17:31:27 2026
 date_format = "%y-%m-%d"
 log_interval = 10 # seconds
 round_digits = 3
+tz = 'Europe/Berlin'
 #systemsetup
 
 mppt1 = "com.victronenergy.solarcharger.ttyUSB0"
@@ -21,7 +22,7 @@ variables_to_log = {
         {"dbus_device" : mppt1,
          "address" : "/Yield/Power",
          'unit' : "W"},
-    "battery_voltage" : 
+    "battery_voltage_mppt" : 
             {"dbus_device" : mppt1,
              "address" : "/Dc/0/Voltage",
              "unit":"V"},
@@ -29,6 +30,34 @@ variables_to_log = {
         {"dbus_device" : mppt1,
          "address" : "/Yield/System",
          "unit":"kWh"},
+    "battery_voltage_inverter" : 
+            {"dbus_device" : inverter1,
+             "address" : "/Dc/0/Voltage",
+             "unit":"V"},
+     "inverter_dc_input_power" : 
+             {"dbus_device" : inverter1,
+              "address" : "/Dc/0/Power",
+              "unit":"W"},
+     "inverter_dc_input_current" : 
+             {"dbus_device" : inverter1,
+              "address" : "/Dc/0/Current",
+              "unit":"W"},
+     "inverter_ac_output" : 
+            {"dbus_device" : inverter1,
+             "address" : "/Ac/Out/P",
+             "unit":"W"},
+    "battery_temperature" : 
+                {"dbus_device" : inverter1,
+                 "address" : "/Dc/0/Temperature",
+                 "unit":"°C"},
+    "inverter_alarm_temperature_status" : 
+                {"dbus_device" : inverter1,
+                 "address" : "Alarms/TemperatureSensor",
+                 "unit":""},     
+    "inverter_alarm_overload" : 
+                {"dbus_device" : inverter1,
+                 "address" : "Alarms/Overload",
+                 "unit":""},     
         }
 
 non_numeric_var = []

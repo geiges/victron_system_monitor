@@ -7,7 +7,7 @@ Created on Fri Jan  2 17:31:27 2026
 """
 
 date_format = "%y-%m-%d"
-log_intervall = 10 # seconds
+log_interval = 10 # seconds
 #systemsetup
 
 mppt1 = "com.victronenergy.solarcharger.ttyUSB0"

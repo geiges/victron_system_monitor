@@ -7,28 +7,38 @@ Created on Fri Jan  2 17:53:44 2026
 """
 import os 
 import time
-import pandas as pd
-
+# import pandas as pd
+import csv
 import config_default as config
 
 from csv import DictWriter
 from pydbus import SystemBus
+    
+from datetime import datetime
 
 
 def update_existing_file(filename: str, fieldnames: list[str]) -> str:
-    date_str = pd.Timestamp.now().strftime(config.date_format)
+
+    now = datetime.now() # current date and time
+
+    date_str = now.strftime(config.date_format)
+
+    # date_str = pd.Timestamp.now().strftime(config.date_format)
     
     if not os.path.exists(filename):
         return "startup"
 
     tt = time.time()
     print("Loading from disk and extending with new columns..", end="")
-    df = pd.read_csv(filename, index_col=0)
-
+    # df = pd.read_csv(filename, index_col=0)
+    reader = csv.DictReader(open(filename))
+    columns = reader.fieldnames
     # update file if new columns or new order
-    changed_columns = fieldnames[1:] != list(df.columns)
+    changed_columns = fieldnames[1:] != list(columns)
     if changed_columns:
-        df.reindex(columns=fieldnames[1:]).to_csv(filename)
+        raise (Exception('Columns did change, not yet implemented'))
+        
+        # df.reindex(columns=fieldnames[1:]).to_csv(filename)
     print(f".done in {time.time() - tt:2.2f}s")
 
     return date_str

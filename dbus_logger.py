@@ -34,7 +34,7 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
     reader = csv.DictReader(open(filename))
     columns = reader.fieldnames
     # update file if new columns or new order
-    changed_columns = fieldnames[1:] != list(columns)
+    changed_columns = any([c1 != c2 for c1,c2 in zip(columns, fieldnames)])
     if changed_columns:
         raise (Exception('Columns did change, not yet implemented'))
         
@@ -116,7 +116,9 @@ def update_loop(debug=False):
 
             # code = str(state).zfill(len(status_vars))
             # row["status"] = code
-
+            if debug:
+                print(row)
+                print(time.time())
             writer.writerow(row)
             print(f".done in {time.time() - now:2.2f}s")
 

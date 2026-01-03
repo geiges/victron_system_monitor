@@ -126,3 +126,8 @@ def update_loop(debug=False):
 
 def main(debug=False):
     os.makedirs("data", exist_ok=True)
+    update_loop(debug=debug)
+    
+    
+if __name__ == '__main__':
+    main(debug=False)

@@ -72,7 +72,7 @@ def update_loop(debug=False):
         ["time"] + list(config.variables_to_log.keys())
         )
         
-    now = time.time()
+    now = datetime.now(tz=timezone)
     
     date_str = now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"

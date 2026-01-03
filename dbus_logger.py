@@ -45,7 +45,7 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
 
 def retrieve_data(bus, variables_to_log):
     
-    data = list
+    data = list()
     for var_name, var_conf in variables_to_log.items():
         
         var_value = bus.get(
@@ -53,7 +53,8 @@ def retrieve_data(bus, variables_to_log):
             var_conf["address"]
             ).GetValue()
         
-        data.append(var_name, var_value)
+        var_value = round(var_value,config.round_digits)
+        data.append((var_name, var_value))
     return data
 
 
@@ -130,4 +131,4 @@ def main(debug=False):
     
     
 if __name__ == '__main__':
-    main(debug=False)
+    main(debug=True)

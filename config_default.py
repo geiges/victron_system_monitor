@@ -8,6 +8,7 @@ Created on Fri Jan  2 17:31:27 2026
 
 date_format = "%y-%m-%d"
 log_interval = 10 # seconds
+round_digits = 3
 #systemsetup
 
 mppt1 = "com.victronenergy.solarcharger.ttyUSB0"
@@ -20,6 +21,10 @@ variables_to_log = {
         {"dbus_device" : mppt1,
          "address" : "/Yield/Power",
          'unit' : "W"},
+    "battery_voltage" : 
+            {"dbus_device" : mppt1,
+             "address" : "/Dc/0/Voltage",
+             "unit":"V"},
     "solar_cum_yield" : 
         {"dbus_device" : mppt1,
          "address" : "/Yield/System",

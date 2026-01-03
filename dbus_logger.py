@@ -49,7 +49,7 @@ def retrieve_data(bus, variables_to_log):
     for var_name, var_conf in variables_to_log.items():
         
         var_value = bus.get(
-            var_conf["bus_device"], 
+            var_conf["dbus_device"], 
             var_conf["address"]
             ).GetValue()
         

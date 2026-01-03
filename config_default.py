@@ -52,11 +52,11 @@ variables_to_log = {
                  "unit":"°C"},
     "inverter_alarm_temperature_status" : 
                 {"dbus_device" : inverter1,
-                 "address" : "Alarms/TemperatureSensor",
+                 "address" : "/Alarms/TemperatureSensor",
                  "unit":""},     
     "inverter_alarm_overload" : 
                 {"dbus_device" : inverter1,
-                 "address" : "Alarms/Overload",
+                 "address" : "/Alarms/Overload",
                  "unit":""},     
         }
 

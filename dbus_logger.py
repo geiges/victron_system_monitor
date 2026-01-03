@@ -47,11 +47,13 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
 
     return date_str
 
-def retrieve_data(bus, variables_to_log):
+def retrieve_data(bus, variables_to_log, debug):
     
     data = list()
     for var_name, var_conf in variables_to_log.items():
         
+        if debug:
+            print(f'Getting {var_conf["address"]} from { var_conf["dbus_device"]}')
         var_value = bus.get(
             var_conf["dbus_device"], 
             var_conf["address"]
@@ -89,7 +91,7 @@ def update_loop(debug=False):
         date_str =  now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
 
-        data = retrieve_data(bus, config.variables_to_log)
+        data = retrieve_data(bus, config.variables_to_log, debug)
         
         with open(filename, mode="a") as f:
             writer = DictWriter(f, fieldnames)

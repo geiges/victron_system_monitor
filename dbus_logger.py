@@ -7,6 +7,7 @@ Created on Fri Jan  2 17:53:44 2026
 """
 import os 
 import time
+import shutil
 # import pandas as pd
 import csv
 import config_default as config
@@ -40,7 +41,8 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
     # update file if new columns or new order
     changed_columns = any([c1 != c2 for c1,c2 in zip(columns, fieldnames)])
     if changed_columns:
-        raise (Exception('Columns did change, not yet implemented'))
+        #
+        shutil.move(filename, filename + '_previous_data')
         
         # df.reindex(columns=fieldnames[1:]).to_csv(filename)
     print(f".done in {time.time() - tt:2.2f}s")

@@ -39,7 +39,7 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
     reader = csv.DictReader(open(filename))
     columns = reader.fieldnames
     # update file if new columns or new order
-    changed_columns = any([c1 != c2 for c1,c2 in zip(columns, fieldnames)])
+    changed_columns = set(fieldnames) != set(columns)
     if changed_columns:
         #
         shutil.move(filename, filename + '_previous_data')

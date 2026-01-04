@@ -43,7 +43,7 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
     if changed_columns:
         #
         shutil.move(filename, filename + '_previous_data')
-        
+        return "startup"
         # df.reindex(columns=fieldnames[1:]).to_csv(filename)
     print(f".done in {time.time() - tt:2.2f}s")
 

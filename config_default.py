@@ -14,6 +14,7 @@ tz = 'Europe/Berlin'
 
 mppt1 = "com.victronenergy.solarcharger.ttyUSB0"
 inverter1 = "com.victronenergy.vebus.ttyUSB1"
+system = "com.victronenergy.system"
 
 # dbus variabls to be logged
 
@@ -57,7 +58,11 @@ variables_to_log = {
     "inverter_alarm_overload" : 
                 {"dbus_device" : inverter1,
                  "address" : "/Alarms/Overload",
-                 "unit":""},     
+                 "unit":""},   
+    "battery_power" : 
+            {"dbus_device" : system,
+             "address" : "/Dc/Battery/Power",
+             "unit":"W"},
         }
 
 non_numeric_var = []

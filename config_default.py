@@ -27,6 +27,10 @@ variables_to_log = {
             {"dbus_device" : mppt1,
              "address" : "/Dc/0/Voltage",
              "unit":"V"},
+    "solar_current_mppt" : 
+            {"dbus_device" : mppt1,
+             "address" : "/Dc/0/Current",
+             "unit":"V"},
     "solar_cum_yield" : 
         {"dbus_device" : mppt1,
          "address" : "/Yield/System",

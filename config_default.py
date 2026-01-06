@@ -7,7 +7,7 @@ Created on Fri Jan  2 17:31:27 2026
 """
 
 date_format = "%y-%m-%d"
-log_interval = 10 # seconds
+log_interval = 5 # seconds
 round_digits = 3
 tz = 'Europe/Berlin'
 #systemsetup
@@ -67,6 +67,10 @@ variables_to_log = {
             {"dbus_device" : system,
              "address" : "/Dc/Battery/Power",
              "unit":"W"},
+     "battery_current" : 
+             {"dbus_device" : system,
+              "address" : "/Dc/Battery/Current",
+              "unit":"V"},
         }
 
 non_numeric_var = []

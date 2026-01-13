@@ -61,8 +61,11 @@ def retrieve_data(bus, variables_to_log, debug):
             var_conf["address"]
             ).GetValue()
         
-        var_value = round(var_value,config.round_digits)
-        data.append((var_name, var_value))
+        try:
+            var_value = round(var_value,config.round_digits)
+            data.append((var_name, var_value))
+        except:
+            print(f'Failed to read  {var_conf["address"]} from { var_conf["dbus_device"]}')
     return data
 
 

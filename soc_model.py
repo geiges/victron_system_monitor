@@ -17,7 +17,11 @@ sys.path.append('/home/and/python/Battery-Kalman/Python/')
 dates = [
     # "26-01-06", 
      # "26-01-07",
-     "26-01-09"
+     "26-01-09",
+     "26-01-10",
+     "26-01-11",
+     "26-01-12",
+     "26-01-13"
          ]
 
 df = list() 
@@ -136,6 +140,9 @@ def update_step(ds):
     estim_SoC.append(Kf.x[0,0])
     OCV.append(battery_simulation.OCV)
     est_OCV.append(mes_voltage[-1]  +  R0 * actual_current)
+    
+    if battery_simulation.state_of_charge < .4:
+        sdf
     
 for t_idx, ds in df.iterrows():
     update_step(ds)

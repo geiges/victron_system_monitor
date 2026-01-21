@@ -15,23 +15,36 @@ import numpy as np
 sys.path.append('/home/and/python/Battery-Kalman/Python/')
 #%%
 dates = [
-    # "26-01-06", 
-     # "26-01-07",
-     "26-01-09",
-     "26-01-10",
-     "26-01-11",
-     "26-01-12",
-     "26-01-13"
+     "26-01-13",
+     "26-01-14",
+     "26-01-15",
+     "26-01-16",
+     "26-01-17",
+     "26-01-18",
+     "26-01-19",
+     "26-01-20",
+     "26-01-21",
          ]
 
-df = list() 
+df = list()
+subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
+ 
 for date in dates: 
     filename = f"log_{date}.csv"
     filepath = os.path.join('data', filename)
-    subprocess.run(["scp", f"root@192.168.1.5:python/victron_system_monitor/{filepath}*", "data/" ])
+    
+    now = pd.Timestamp.now()
+    date_file = pd.Timestamp('20' + date)
+    
+    # subprocess.run(["scp", f"root@192.168.1.5:/data/python/victron_system_monitor/{filepath}*", "data/" ])
     _df = pd.read_csv(filepath, index_col=0)
     _df.index = [f'20{date} {x}' for x in _df.index]
-    pd.DatetimeIndex(_df.index)
+    
+    
+    idx_to_drop = _df.index[_df.index.str.contains('time')]
+    _df = _df.drop(idx_to_drop)
+    _df= _df.astype(float)
+    # pd.DatetimeIndex(_df.index)
     df.append(_df)
 df = pd.concat(df, axis=0)
 df.index = pd.DatetimeIndex(df.index)
@@ -43,12 +56,13 @@ if "battery_current" not in df.columns:
 
 R_cabel_mppt = 0.011
 R_cable_inverter = 0.0035
-voltage_offset = 0
+voltage_offset = -.05
 # MPPT voltage measurement
-df['battery_voltage_1'] = df.battery_voltage_mppt - (R_cabel_mppt * df.solar_current_mppt) + 0.06
-df['battery_voltage_2'] = df.battery_voltage_inverter - (R_cable_inverter * df.inverter_dc_input_current) 
+df['battery_voltage_1'] = df.battery_voltage_mppt - (R_cabel_mppt * df.solar_current_mppt) 
+df['battery_voltage_2'] = df.battery_voltage_inverter - (R_cable_inverter * df.inverter_dc_input_current) +- 0.06
 df['est_battery_voltage'] = ((df.battery_voltage_1 + df.battery_voltage_2) / 2) + voltage_offset
-
+na_idx = df.index[df.est_battery_voltage.isnull()]
+df.loc[na_idx,'est_battery_voltage']  = df.loc[na_idx,'battery_voltage_1']
 nanidx = df.battery_current.isnull()
 
 df.loc[nanidx, 'battery_current'] = df.loc[nanidx, 'battery_power'] / df.loc[nanidx, 'est_battery_voltage'] 
@@ -56,25 +70,26 @@ df.loc[nanidx, 'battery_current'] = df.loc[nanidx, 'battery_power'] / df.loc[nan
 
 
 # corretion for hidden constant consumers
-const_consumption = 5   # W
+const_consumption = 8   # W
 
 #df.solar_current_mppt = df.solar_current_mppt + (const_consumption /  df.battery_voltage_mppt)
 df.battery_power -= const_consumption
 df.battery_current -= const_consumption / df['est_battery_voltage'] 
 
+df['battery_out'] = df.battery_power- df.solar_power_1
 
 #%%
 from battery import Battery
 from main import get_EKF
 
-Q_tot = 200
+Q_tot = 190
 
 # Thevenin model values
 R0 = 0.02
 R1 = 0.03
 C1 = 40000
 
-charge_efficiency = .8
+charge_efficiency = .9
 # Thevenin model values
 #values for 6.1.26
 # R0 = 0.018
@@ -92,7 +107,7 @@ charge_efficiency = .8
 R0 = 0.012
 
 R1 = 0.03  
-C1 = 10000
+C1 = 3000
 
 # time period
 time_step = 60
@@ -101,7 +116,7 @@ df = df.interpolate(axis=0)
 ncells = 8
 battery_simulation = Battery(Q_tot, R0, R1, C1, ncells, charge_efficiency)
 
-battery_simulation.actual_capacity =  0.93* battery_simulation.total_capacity
+battery_simulation.actual_capacity =  0.55* battery_simulation.total_capacity
 #%%
 
 # measurement noise standard deviation
@@ -134,15 +149,15 @@ def update_step(ds):
     mes_voltage.append(measured_voltage)
     print(measured_voltage)
     Kf.predict(u=actual_current)
-    Kf.update(mes_voltage[-1]  +  R0 * actual_current)
+    Kf.update(mes_voltage[-1]  +-  R0 * actual_current)
     
     true_SoC.append(battery_simulation.state_of_charge)
     estim_SoC.append(Kf.x[0,0])
     OCV.append(battery_simulation.OCV)
     est_OCV.append(mes_voltage[-1]  +  R0 * actual_current)
     
-    if battery_simulation.state_of_charge < .4:
-        sdf
+    # if battery_simulation.state_of_charge < .4:
+        
     
 for t_idx, ds in df.iterrows():
     update_step(ds)
@@ -152,28 +167,42 @@ df["true_SOC"] =  true_SoC[1:]
 df["OCV"] =  OCV[1:]
 df["est_OCV"] =  est_OCV[1:]
 #plt.plot(true_SoC)
+
 #%%
+
 fig = plt.figure('battery')
 plt.clf()
-ax1 = plt.subplot(2,2,1)
+ax1 = plt.subplot(3,1,1)
 # Voltage 
 df[['battery_voltage_mppt','battery_voltage_inverter', 'battery_voltage_1','battery_voltage_2','OCV', "est_OCV"]].plot(ax=ax1)
+plt.grid('on')
 
+ax = plt.subplot(3,1,2, sharex = ax1)
+df.solar_power_1.plot(ax=ax, label = 'Solar DC in')
+plt.fill_between(x = df.index,y1=0,y2=df.solar_power_1, color='royalblue',alpha=.1)
+# plt.yscale('log')
+plt.grid('on')
+ax_twin = plt.twinx(ax)
+color = 'red'
+# df.battery_power.plot(ax=ax_twin,color='orange', label='AC out')
+df.battery_out.plot(ax=ax_twin,color=color, label='DC out')
+plt.fill_between(x = df.index,y1=0,y2=df.battery_out, color=color,alpha=.1)
+ax_twin.tick_params(axis='y', labelcolor=color)
 
-ax = plt.subplot(2,2,2, sharex = ax1)
-df.solar_power_1.plot(ax=ax, label = 'Solar in')
-df.battery_power.plot(ax=ax, label='AC out')
 ax.set_title('Fluxes [W]')
-plt.legend()
-# ax0 = ax.twinx()
-ax = plt.subplot(2,2,3)
-plot_data =  df.solar_cum_yield.resample('1h').max().diff()
-plt.bar(plot_data.index,plot_data,width=.03)
 
-ax =  plt.subplot(2,2,4, sharex = ax1)
+plt.legend()
+
+
+ax =  plt.subplot(3,1,3, sharex = ax1)
 df[['estimated_SOC', "true_SOC"]].plot(ax=ax)
 plt.grid('on')
 
-cum_output= df.inverter_dc_input_power.resample("1min").mean().cumsum()/60e3
+inverter_output_idx = df.inverter_ac_output>0
+
+cum_dc_output= (df.battery_power[inverter_output_idx] -  df.solar_power_1[inverter_output_idx]).resample("1min").mean().cumsum()/60e3
+cum_ac_output = df.inverter_ac_output.resample("1min").mean().cumsum()/60e3
 print(f"Total yield over period: { df.solar_cum_yield.iloc[-1] -df.solar_cum_yield.iloc[0]:2.2f} kWh")
-print(f"Total output over period: {cum_output.iloc[-1]:2.2f} kWh" )
+print(f"Total DC battery output over period: {cum_dc_output.iloc[-1]:2.2f} kWh" )
+print(f"Total AC inverter output over period: {cum_ac_output.iloc[-1]:2.2f} kWh" )
+plt.tight_layout()

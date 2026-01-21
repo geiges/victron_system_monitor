@@ -43,10 +43,16 @@ def update_existing_file(filename: str, fieldnames: list[str]) -> str:
     if changed_columns:
         #
         shutil.move(filename, filename + '_previous_data')
-        return "startup"
+        reader = csv.DictReader(open(filename + '_previous_data'))
+        with open(filename, mode="a") as f:
+            writer = DictWriter(f, fieldnames)
+            writer.writeheader()
+            for row in reader:
+                writer.writerow(row)
+        
         # df.reindex(columns=fieldnames[1:]).to_csv(filename)
     print(f".done in {time.time() - tt:2.2f}s")
-
+    
     return date_str
 
 def retrieve_data(bus, variables_to_log, debug):

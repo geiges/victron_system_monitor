@@ -15,7 +15,7 @@ import numpy as np
 sys.path.append('/home/and/python/Battery-Kalman/Python/')
 #%%
 dates = [
-     "26-01-13",
+     # "26-01-13",
      "26-01-14",
      "26-01-15",
      "26-01-16",
@@ -24,6 +24,7 @@ dates = [
      "26-01-19",
      "26-01-20",
      "26-01-21",
+     "26-01-22",
          ]
 
 df = list()
@@ -56,7 +57,7 @@ if "battery_current" not in df.columns:
 
 R_cabel_mppt = 0.011
 R_cable_inverter = 0.0035
-voltage_offset = -.05
+voltage_offset = -.1
 # MPPT voltage measurement
 df['battery_voltage_1'] = df.battery_voltage_mppt - (R_cabel_mppt * df.solar_current_mppt) 
 df['battery_voltage_2'] = df.battery_voltage_inverter - (R_cable_inverter * df.inverter_dc_input_current) +- 0.06
@@ -82,14 +83,14 @@ df['battery_out'] = df.battery_power- df.solar_power_1
 from battery import Battery
 from main import get_EKF
 
-Q_tot = 190
+Q_tot = 210
 
 # Thevenin model values
 R0 = 0.02
 R1 = 0.03
 C1 = 40000
 
-charge_efficiency = .9
+charge_efficiency = 1.0 
 # Thevenin model values
 #values for 6.1.26
 # R0 = 0.018
@@ -104,10 +105,10 @@ charge_efficiency = .9
 # R1 = 0.01
 # C1 = 50000
 
-R0 = 0.012
+R0 = 0.013
 
 R1 = 0.03  
-C1 = 3000
+C1 = 2000
 
 # time period
 time_step = 60
@@ -116,11 +117,13 @@ df = df.interpolate(axis=0)
 ncells = 8
 battery_simulation = Battery(Q_tot, R0, R1, C1, ncells, charge_efficiency)
 
-battery_simulation.actual_capacity =  0.55* battery_simulation.total_capacity
+battery_simulation.actual_capacity =  0.68* battery_simulation.total_capacity
+battery_simulation.plot_SOCV_relation()
+# sdf
 #%%
 
 # measurement noise standard deviation
-std_dev = 0.1
+std_dev = 0.01
 
 #get configured EKF
 Kf = get_EKF(R0, R1, C1, Q_tot, std_dev, time_step, battery_simulation)
@@ -129,10 +132,11 @@ time         = [0]
 true_SoC     = [battery_simulation.state_of_charge]
 estim_SoC    = [Kf.x[0,0]]
 # true_voltage = [battery_simulation.voltage]
-mes_voltage  = [battery_simulation.voltage + np.random.normal(0,0.1,1)[0]]
+mes_voltage  = [battery_simulation.voltage]
 current      = [battery_simulation.current]
 OCV          = [battery_simulation.OCV]
 est_OCV      = [battery_simulation.OCV]
+I_KH         = [0]      
 def update_step(ds):
     
     measured_voltage = ds.est_battery_voltage
@@ -149,10 +153,11 @@ def update_step(ds):
     mes_voltage.append(measured_voltage)
     print(measured_voltage)
     Kf.predict(u=actual_current)
-    Kf.update(mes_voltage[-1]  +-  R0 * actual_current)
-    
+    Kf.update(mes_voltage[-1] -  R0 * actual_current)
+    Kf.x[0,0]
     true_SoC.append(battery_simulation.state_of_charge)
     estim_SoC.append(Kf.x[0,0])
+    I_KH.append(Kf._I_KH)
     OCV.append(battery_simulation.OCV)
     est_OCV.append(mes_voltage[-1]  +  R0 * actual_current)
     
@@ -166,6 +171,7 @@ df["estimated_SOC"] =  estim_SoC[1:]
 df["true_SOC"] =  true_SoC[1:]
 df["OCV"] =  OCV[1:]
 df["est_OCV"] =  est_OCV[1:]
+df['I_KH']    = I_KH[1:]
 #plt.plot(true_SoC)
 
 #%%
@@ -195,14 +201,23 @@ plt.legend()
 
 
 ax =  plt.subplot(3,1,3, sharex = ax1)
-df[['estimated_SOC', "true_SOC"]].plot(ax=ax)
+df[['estimated_SOC', "true_SOC", "I_KH"]].plot(ax=ax)
 plt.grid('on')
 
 inverter_output_idx = df.inverter_ac_output>0
 
 cum_dc_output= (df.battery_power[inverter_output_idx] -  df.solar_power_1[inverter_output_idx]).resample("1min").mean().cumsum()/60e3
 cum_ac_output = df.inverter_ac_output.resample("1min").mean().cumsum()/60e3
+
+
+
 print(f"Total yield over period: { df.solar_cum_yield.iloc[-1] -df.solar_cum_yield.iloc[0]:2.2f} kWh")
 print(f"Total DC battery output over period: {cum_dc_output.iloc[-1]:2.2f} kWh" )
 print(f"Total AC inverter output over period: {cum_ac_output.iloc[-1]:2.2f} kWh" )
+
+cum_yielt_today = df.solar_cum_yield.resample('1d').max().diff()
+output_today = cum_ac_output.resample('1d').max().diff()
+print(f"Total AC inverter output today: {output_today.iloc[-1]:2.2f} kWh" )
+print(f"Total solar harvest today: {cum_yielt_today.iloc[-1]:2.2f} kWh" )
+
 plt.tight_layout()

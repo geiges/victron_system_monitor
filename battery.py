@@ -5,7 +5,10 @@ import numpy as np
 
 class Battery:
     # capacity in Ah
-    def __init__(self, total_capacity, R0, R1, C1, cells=1, charge_efficiency=1.0):
+    def __init__(self, total_capacity, R0, R1, C1, cells=1, 
+                 charge_efficiency=1.0,
+                 const_consumption=0.0 # in W
+                 ):
         # capacity in As
         self.total_capacity = total_capacity * 3600
         self.actual_capacity = self.total_capacity
@@ -14,8 +17,8 @@ class Battery:
         self.R0 = R0
         self.R1 = R1
         self.C1 = C1
-
-        self._current = 0
+     
+        self._current = 0 #  discarge is negative
         self._RC_voltage = 0
         
         self.charge_efficiency = charge_efficiency
@@ -54,6 +57,7 @@ class Battery:
     @property
     def current(self):
         return self._current
+    
 
     # @current.setter
     # def current(self, current):

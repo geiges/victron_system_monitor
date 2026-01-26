@@ -13,7 +13,7 @@ import csv
 import config_default as config
 
 from csv import DictWriter
-#from pydbus import SystemBus
+from pydbus import SystemBus
     
 from datetime import datetime, timedelta
 import pytz
@@ -34,7 +34,7 @@ def update_existing_file(filename: str,
     # date_str = pd.Timestamp.now().strftime(config.date_format)
     
     if not os.path.exists(filename):
-        return "startup"
+        return 
 
     tt = time.time()
     print("Loading from disk and extending with new columns..", end="")
@@ -56,7 +56,7 @@ def update_existing_file(filename: str,
         # df.reindex(columns=fieldnames[1:]).to_csv(filename)
     print(f".done in {time.time() - tt:2.2f}s")
     
-    return date_str
+    # return date_str
 
 def retrieve_data(bus, variables_to_log, debug):
     
@@ -98,8 +98,13 @@ def update_loop(debug=False):
     
     date_str = now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"
-    old_date_str = update_existing_file(filename, fieldnames, soc_model, measure)
+    update_existing_file(filename, fieldnames, soc_model, measure)
     
+    
+    if not os.path.exists(filename):
+        write_header = True
+    else:
+        write_header= False
     
     bus = SystemBus()
     
@@ -124,10 +129,10 @@ def update_loop(debug=False):
         if data is not None:
             with open(filename, mode="a") as f:
                 writer = DictWriter(f, fieldnames)
-                if date_str != old_date_str:
+                if write_header:
                     # new file was started we need to output the header
                     writer.writeheader()
-                    old_date_str = date_str
+                    write_header = False
     
                 row = dict(time=now_str)
     

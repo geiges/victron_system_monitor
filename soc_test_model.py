@@ -45,11 +45,13 @@ for date in dates:
     
     # subprocess.run(["scp", f"root@192.168.1.5:/data/python/victron_system_monitor/{filepath}*", "data/" ])
     _df = pd.read_csv(filepath, index_col=0)
-    _df.index = [f'20{date} {x}' for x in _df.index]
+    
     
     
     idx_to_drop = _df.index[_df.index.str.contains('time')]
     _df = _df.drop(idx_to_drop)
+    _df.index = [f'20{date} {x}' for x in _df.index]
+    
     _df= _df.astype(float)
     # pd.DatetimeIndex(_df.index)
     df.append(_df)

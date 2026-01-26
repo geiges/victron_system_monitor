@@ -6,13 +6,13 @@ Created on Fri Jan 23 19:48:12 2026
 @author: and
 """
 
-import sys
-import os
-import subprocess
-import matplotlib.pyplot as plt
+# import sys
+# import os
+# import subprocess
+# import matplotlib.pyplot as plt
 import numpy as np
 from battery import Battery
-from kalman import get_EKF
+from kalman import ExtendedKalmanFilter
 
 
 # system config
@@ -49,6 +49,8 @@ class Measurement():
         self.mppt_voltage_offset = mppt_voltage_offset
         self.inverter_voltage_offset = inverter_voltage_offset
         
+        
+        
     def process_raw_measurments(self, 
                 current_mppt,
                 voltage_mppt,
@@ -72,6 +74,14 @@ class Measurement():
              est_battery_voltage = (estimated_voltage / n_est )
         
         return est_battery_voltage
+    
+    def corrected_battery_current(self, ):
+        
+        df.battery_power -= const_consumption
+        df.battery_current -= const_consumption / df['est_battery_voltage'] 
+
+        df['battery_out'] = df.battery_power- df.solar_power_1
+
 
 class SOC_estimator():
     
@@ -108,33 +118,32 @@ class SOC_estimator():
         
         self.battery_simulation.actual_capacity =  SOC* self.battery_simulation.total_capacity
     
-        self.Kf = get_EKF(SOC,
-                          RC_voltage,
-                          self.R0, 
-                          self.R1, 
-                          self.C1, 
-                          self.Q_tot, 
+        self.Kf = ExtendedKalmanFilter(
                           self.std_dev, 
                           self.time_step, 
                           self.battery_simulation)
+        
+        self.Kf.set_state(SOC, RC_voltage)
    
 
     def update(self,
                battery_current,
-               measured_voltage):
+               measured_voltage, 
+               time_delta):
         
         ## coulomb counting
         
-        self.battery_simulation.update(self.time_step, 
+        self.battery_simulation.update(time_delta, 
                                        battery_current)
         counted_SOC = self.battery_simulation.state_of_charge
         
 
         # ENKF updating
-        self.Kf.predict(u=battery_current)
+        self.Kf.predict(time_delta=time_delta, 
+                        u=battery_current)
         
         corrected_voltage = measured_voltage - self.R0 * battery_current
-        self.Kf.update(corrected_voltage)
+        self.Kf.update(corrected_voltage, battery_current)
         
         estimated_SOC = self.Kf.x[0,0]
         

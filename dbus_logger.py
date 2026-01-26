@@ -13,16 +13,19 @@ import csv
 import config_default as config
 
 from csv import DictWriter
-from pydbus import SystemBus
+#from pydbus import SystemBus
     
 from datetime import datetime, timedelta
 import pytz
 
 timezone = pytz.timezone(config.tz)
 
+parallel_SOC = True
 
-
-def update_existing_file(filename: str, fieldnames: list[str]) -> str:
+def update_existing_file(filename: str, 
+                         fieldnames: list[str],
+                         soc_model,
+                         measure) -> str:
 
     now = datetime.now(tz=timezone) # current date and time
 
@@ -78,8 +81,14 @@ def retrieve_data(bus, variables_to_log, debug):
 def update_loop(debug=False):
     
     
-    bus = SystemBus()
-
+    if parallel_SOC:
+        import SOC_estimator as soc
+        
+        soc_model = soc.SOC_estimator(soc.config_V1)
+        measure = soc.Measurement(**soc.measurement_config)
+    else:
+        soc_model, measure = None, None
+        
     # get variable_names from config
     fieldnames = (
         ["time"] + list(config.variables_to_log.keys())
@@ -89,8 +98,11 @@ def update_loop(debug=False):
     
     date_str = now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"
-    old_date_str = update_existing_file(filename, fieldnames)
-
+    old_date_str = update_existing_file(filename, fieldnames, soc_model, measure)
+    
+    
+    bus = SystemBus()
+    
     # wait until next full interval before first sync
     if not debug:
         time.sleep(config.log_interval - (now % timedelta(config.log_interval).total_seconds()))

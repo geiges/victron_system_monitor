@@ -11,8 +11,10 @@ import subprocess
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from battery import Battery
+from kalman import get_EKF
 
-sys.path.append('/home/and/python/Battery-Kalman/Python/')
+# sys.path.append('/home/and/python/Battery-Kalman/Python/')
 #%%
 dates = [
      # "26-01-13",
@@ -25,6 +27,7 @@ dates = [
      "26-01-20",
      "26-01-21",
      "26-01-22",
+     "26-01-23",
          ]
 
 df = list()
@@ -80,8 +83,6 @@ df.battery_current -= const_consumption / df['est_battery_voltage']
 df['battery_out'] = df.battery_power- df.solar_power_1
 
 #%%
-from battery import Battery
-from main import get_EKF
 
 Q_tot = 210
 
@@ -105,9 +106,9 @@ charge_efficiency = 1.0
 # R1 = 0.01
 # C1 = 50000
 
-R0 = 0.013
+R0 = 0.01
 
-R1 = 0.03  
+R1 = 0.04
 C1 = 2000
 
 # time period
@@ -118,7 +119,7 @@ ncells = 8
 battery_simulation = Battery(Q_tot, R0, R1, C1, ncells, charge_efficiency)
 
 battery_simulation.actual_capacity =  0.68* battery_simulation.total_capacity
-battery_simulation.plot_SOCV_relation()
+#battery_simulation.plot_SOCV_relation()
 # sdf
 #%%
 
@@ -136,7 +137,7 @@ mes_voltage  = [battery_simulation.voltage]
 current      = [battery_simulation.current]
 OCV          = [battery_simulation.OCV]
 est_OCV      = [battery_simulation.OCV]
-I_KH         = [0]      
+   
 def update_step(ds):
     
     measured_voltage = ds.est_battery_voltage
@@ -153,14 +154,14 @@ def update_step(ds):
     mes_voltage.append(measured_voltage)
     print(measured_voltage)
     Kf.predict(u=actual_current)
-    Kf.update(mes_voltage[-1] -  R0 * actual_current)
+    Kf.update(mes_voltage[-1] -  R0 * actual_current, u=actual_current)
     Kf.x[0,0]
     true_SoC.append(battery_simulation.state_of_charge)
     estim_SoC.append(Kf.x[0,0])
-    I_KH.append(Kf._I_KH)
+
     OCV.append(battery_simulation.OCV)
     est_OCV.append(mes_voltage[-1]  +  R0 * actual_current)
-    
+    # est_OCV.append(Kf.y_pred +  R0 * actual_current)
     # if battery_simulation.state_of_charge < .4:
         
     
@@ -171,7 +172,7 @@ df["estimated_SOC"] =  estim_SoC[1:]
 df["true_SOC"] =  true_SoC[1:]
 df["OCV"] =  OCV[1:]
 df["est_OCV"] =  est_OCV[1:]
-df['I_KH']    = I_KH[1:]
+
 #plt.plot(true_SoC)
 
 #%%
@@ -197,12 +198,17 @@ ax_twin.tick_params(axis='y', labelcolor=color)
 
 ax.set_title('Fluxes [W]')
 
-plt.legend()
+plt.legend()    
 
 
 ax =  plt.subplot(3,1,3, sharex = ax1)
-df[['estimated_SOC', "true_SOC", "I_KH"]].plot(ax=ax)
+df[['estimated_SOC', "true_SOC"]].plot(ax=ax)
 plt.grid('on')
+ax_twin = plt.twinx(ax)
+color = 'gray'
+# df.battery_power.plot(ax=ax_twin,color='orange', label='AC out')
+df.battery_temperature.plot(ax=ax_twin,color=color, label='Battery temperature')
+
 
 inverter_output_idx = df.inverter_ac_output>0
 

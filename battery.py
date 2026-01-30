@@ -45,10 +45,10 @@ class Battery:
         plt.scatter(self._rep_SOC, self._rep_V, marker='x')
         plt.plot(self._rep_SOC, [self._OCV_model(x) for x in self._rep_SOC], )
         
-        
+    
         
     def update(self, time_delta, current):
-        self._current = current
+        self._current = current 
         self.actual_capacity -= (self.current * time_delta) * self.charge_efficiency
         exp_coeff = m.exp(-time_delta/(self.R1*self.C1))
         self._RC_voltage *= exp_coeff
@@ -57,6 +57,7 @@ class Battery:
     @property
     def current(self):
         return self._current
+    
     
 
     # @current.setter

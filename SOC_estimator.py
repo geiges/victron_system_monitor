@@ -25,6 +25,7 @@ config_V1 = {
     "ncells" : 8,
     "std_dev" : 0.01,
     "charge_efficiency" : 1.0,
+    'system_consuption' : 5, # in W
     "version" : 'V1'
 }
 
@@ -41,17 +42,17 @@ class Measurement():
                  R_cabel_mppt ,
                  R_cable_inverter,
                  mppt_voltage_offset,
-                 inverter_voltage_offset
-                 ):
+                 inverter_voltage_offset,
+                 system_consuption):
         
         self.R_cabel_mppt = R_cabel_mppt
         self.R_cable_inverter = R_cable_inverter
         self.mppt_voltage_offset = mppt_voltage_offset
         self.inverter_voltage_offset = inverter_voltage_offset
+        self.system_consuption = system_consuption
         
         
-        
-    def process_raw_measurments(self, 
+    def corrected_battery_voltage(self, 
                 current_mppt,
                 voltage_mppt,
                 inverter_current,
@@ -59,6 +60,8 @@ class Measurement():
         
         
         #out = dict()
+        
+        current_mppt = current_mppt - (self.system_consuption / voltage_mppt)
         estimated_voltage = 0
         n_est= 0
         if np.isnan(voltage_mppt):
@@ -73,14 +76,27 @@ class Measurement():
         if n_est > 0:
              est_battery_voltage = (estimated_voltage / n_est )
         
-        return est_battery_voltage
+        return est_battery_voltage, current_mppt
     
-    def corrected_battery_current(self, ):
+    def corrected_battery_current(self, 
+                                  voltage_mppt,
+                                  battery_current,
+                                  battery_power,
+                                  battery_voltage
+                                  ):
         
+       if np.isnan(battery_current):
+
+        battery_current = battery_power / battery_voltage
+
+
+
+        # corretion for hidden constant consumers
+        # const_consumption = 8   # W
+
+        #df.solar_current_mppt = df.solar_current_mppt + (const_consumption /  df.battery_voltage_mppt)
         df.battery_power -= const_consumption
         df.battery_current -= const_consumption / df['est_battery_voltage'] 
-
-        df['battery_out'] = df.battery_power- df.solar_power_1
 
 
 class SOC_estimator():
@@ -97,6 +113,7 @@ class SOC_estimator():
         self.C1 = config['C1']
         self.ncells = config['ncells']
         self.Q_tot = config['Q_tot'] # in Ah
+        self.system_consuption =  config['system_consuption'] # in W
         
         #system_properties
         self.charge_efficiency = config['charge_efficiency']
@@ -127,23 +144,24 @@ class SOC_estimator():
    
 
     def update(self,
-               battery_current,
+               measured_battery_current,
                measured_voltage, 
                time_delta):
         
         ## coulomb counting
         
         self.battery_simulation.update(time_delta, 
-                                       battery_current)
+                                       measured_battery_current)
+        
         counted_SOC = self.battery_simulation.state_of_charge
         
 
         # ENKF updating
         self.Kf.predict(time_delta=time_delta, 
-                        u=battery_current)
+                        u=measured_battery_current)
         
-        corrected_voltage = measured_voltage - self.R0 * battery_current
-        self.Kf.update(corrected_voltage, battery_current)
+        corrected_voltage = measured_voltage - self.R0 * measured_battery_current
+        self.Kf.update(corrected_voltage, measured_battery_current)
         
         estimated_SOC = self.Kf.x[0,0]
         

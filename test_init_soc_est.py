@@ -85,11 +85,14 @@ def get_last_model_state():
                     
                 else:
                     
-                    measured_voltage = measure.process_raw_measurments(current_mppt = row['solar_current_mppt'], 
+                    measured_voltage, current_mppt = measure.process_raw_measurments(current_mppt = row['solar_current_mppt'], 
                                                                        voltage_mppt = row['battery_voltage_mppt'], 
                                                                        inverter_current = row['inverter_dc_input_current'], 
                                                                        voltage_inverter = row['battery_voltage_inverter'])
-                soc_model.C1
+                    
+                    soc_model.update(measured_battery_current,
+                                     measured_voltage, 
+                                     time_delta)
                 
         
     else:

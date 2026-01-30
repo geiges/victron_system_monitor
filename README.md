@@ -10,7 +10,6 @@ Python software to be un on Venus OS to log available solar, inverter and batter
 ## Installation
 opkg install git
 opkg install python3-tomllib
-
 git clone https://github.com/geiges/victron_system_monitor.git
     
 ### Using uv for package managing
@@ -20,6 +19,5 @@ uv venv --system-site-packages --python /usr/bin/python3
 ## Geting stared
 
 """
-
-uv run ?`
+uv run dbus_logger.py
 """

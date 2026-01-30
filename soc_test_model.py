@@ -31,11 +31,15 @@ dates = [
      "26-01-24",
      "26-01-25",
      "26-01-26",
+     "26-01-27",
+     "26-01-28",
+     "26-01-29",
+     "26-01-30",
          ]
 
 df = list()
-subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
- 
+#subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
+subprocess.run(['sh', "rsync.sh"])
 for date in dates: 
     filename = f"log_{date}.csv"
     filepath = os.path.join('data', filename)
@@ -72,6 +76,7 @@ df['battery_voltage_2'] = df.battery_voltage_inverter - (R_cable_inverter * df.i
 df['est_battery_voltage'] = ((df.battery_voltage_1 + df.battery_voltage_2) / 2) + voltage_offset
 na_idx = df.index[df.est_battery_voltage.isnull()]
 df.loc[na_idx,'est_battery_voltage']  = df.loc[na_idx,'battery_voltage_1']
+
 nanidx = df.battery_current.isnull()
 
 df.loc[nanidx, 'battery_current'] = df.loc[nanidx, 'battery_power'] / df.loc[nanidx, 'est_battery_voltage'] 
@@ -234,3 +239,4 @@ print(f"Total AC inverter output today: {output_today.iloc[-1]:2.2f} kWh" )
 print(f"Total solar harvest today: {cum_yielt_today.iloc[-1]:2.2f} kWh" )
 
 plt.tight_layout()
+    

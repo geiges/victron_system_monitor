@@ -12,6 +12,7 @@ class VariableType(NamedTuple):
     subaddress : str
     unit : str
 
+
 class BaseComponent(object):
     """
     Base class for system components to provide some common functions
@@ -20,6 +21,7 @@ class BaseComponent(object):
     def __init__(self, product_name):
         # Root string to identify available components on dbus
         self.component_type = None
+        
     def _components_on_bus(self, dbus):
         """
         Check is type of device is available on bus and returns instances
@@ -32,7 +34,7 @@ class BaseComponent(object):
             
             if self.product_name == dbus.get(
                 interface, 
-                'ProductName'
+                '/ProductName'
                 ).GetValue():
                     return True
         
@@ -47,7 +49,7 @@ class BaseComponent(object):
             
             comp_product_name = dbus.get(
                 interface, 
-                'ProductName'
+                '/ProductName'
                 ).GetValue()
             
             if comp_product_name == self.product_name:
@@ -109,7 +111,7 @@ class VictronSolarCharger(BaseComponent):
         self.component_type = 'com.victronenergy.solarcharger'
         
         
-class VictronMultplusII(BaseComponent):
+class VictronMultiplusII(BaseComponent):
     """
     Victron solar charger component
     """

@@ -28,17 +28,7 @@ class BaseComponent(object):
         """    
         return [x for x in dbus.dbus.ListNames() if x.startswith(self.component_type)]
     
-    def is_avaiable_on_bus(self, dbus):
-    
-        for interface in self._components_on_bus(dbus):
-            
-            if self.product_name == dbus.get(
-                interface, 
-                '/ProductName'
-                ).GetValue():
-                    return True
-        
-        return False
+   
     
     def get_interface(self, dbus):
         """
@@ -52,11 +42,18 @@ class BaseComponent(object):
                 '/ProductName'
                 ).GetValue()
             
-            if comp_product_name == self.product_name:
+            if (self.product_name is None) or (comp_product_name == self.product_name):
                 
                 return interface
         else:
             return None
+        
+    def is_avaiable_on_bus(self, dbus):
+     
+        if self.get_interface(dbus) is None:
+            return False
+        else:
+            return True
         
     def get_device_variables(self,dbus):
         """

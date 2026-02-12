@@ -16,7 +16,7 @@ tz = 'Europe/Berlin'
 system_components = [
     components.VictronSolarCharger('SmartSolar Charger MPPT 150/35', short_name='mppt150'),
     components.VictronMultiplusII('MultiPlus-II 24/3000/70-32', short_name='multiplus'),
-    components.VictronSystem('-', short_name='system'),
+    components.VictronSystem(None, short_name='system'),
     ]
 
 

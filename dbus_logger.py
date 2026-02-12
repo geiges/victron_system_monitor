@@ -25,6 +25,7 @@ parallel_SOC = True
 def get_variables_to_log(dbus):
     
     variables_to_log = dict()
+    missing_components = list()
     
     #loop over configures system components
     for component in config.system_components:
@@ -32,8 +33,12 @@ def get_variables_to_log(dbus):
         if component.is_avaiable_on_bus(dbus):
             # component is currently connected
             variables_to_log.update(component.get_device_variables(dbus))
+        else:
+            missing_components.append(component)
             
-    return variables_to_log
+    if len(missing_components)> 0:
+        print(f'The following components are unresponsive: {missing_components}')
+    return variables_to_log, missing_components
             
 
 def update_existing_file(filename: str, 

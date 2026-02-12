@@ -31,7 +31,7 @@ def get_variables_to_log(dbus):
         
         if component.is_avaiable_on_bus(dbus):
             # component is currently connected
-            variables_to_log.update(component.get_device_variables())
+            variables_to_log.update(component.get_device_variables(dbus))
             
     return variables_to_log
             

@@ -46,11 +46,11 @@ class BaseComponent(object):
         else:
             return None
         
-    def get_device_variables(self):
+    def get_device_variables(self,dbus):
         """
         Returns a dictionary of all implemented variables for this device
         """
-        interface_address = self.get_interface()
+        interface_address = self.get_interface(dbus)
         variables = {}
         if interface_address is None:
             return variables

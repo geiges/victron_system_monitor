@@ -101,7 +101,7 @@ def update_loop(debug=False):
     
     bus = SystemBus()
     
-    variables_to_log = get_variables_to_log(bus)
+    variables_to_log, missing_components = get_variables_to_log(bus)
     
     if parallel_SOC:
         import SOC_estimator as soc

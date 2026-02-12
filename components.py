@@ -20,13 +20,23 @@ class BaseComponent(object):
     def __init__(self, product_name):
         # Root string to identify available components on dbus
         self.component_type = None
-        
-    
-    def is_avaiable_on_bus(self, dbus):
+    def _components_on_bus(self, dbus):
         """
         Check is type of device is available on bus and returns instances
         """    
         return [x for x in dbus.dbus.ListNames() if x.startswith(self.component_type)]
+    
+    def is_avaiable_on_bus(self, dbus):
+    
+        for interface in self._components_on_bus(dbus):
+            
+            if self.product_name == dbus.get(
+                interface, 
+                'ProductName'
+                ).GetValue():
+                    return True
+        
+        return False
     
     def get_interface(self, dbus):
         """

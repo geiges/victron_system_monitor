@@ -9,9 +9,7 @@ import os
 import datetime
 import pytz
 from csv import DictWriter, DictReader
-
 import config_default as config
-
 
 timezone = pytz.timezone(config.tz)
 import SOC_estimator as soc

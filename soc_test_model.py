@@ -17,7 +17,7 @@ from kalman import ExtendedKalmanFilter
 # sys.path.append('/home/and/python/Battery-Kalman/Python/')
 #%%
 dates = [
-     # "26-01-13",
+     "26-01-13",
      "26-01-14",
      "26-01-15",
      "26-01-16",
@@ -35,11 +35,25 @@ dates = [
      "26-01-28",
      "26-01-29",
      "26-01-30",
+     "26-01-31",
+     "26-02-01",
+     "26-02-02",
+     "26-02-03",    
+     "26-02-04",
+     "26-02-05",
+     "26-02-06",
+     "26-02-07",
+     "26-02-08",
+     "26-02-09",    
+     "26-02-10",
+     
+     "26-02-11",    
+     "26-02-12",
          ]
 
 df = list()
-#subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
-subprocess.run(['sh', "rsync.sh"])
+subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
+# subprocess.run(['sh', "rsync.sh"])
 for date in dates: 
     filename = f"log_{date}.csv"
     filepath = os.path.join('data', filename)
@@ -101,7 +115,7 @@ R0 = 0.02
 R1 = 0.03
 C1 = 40000
 
-charge_efficiency = 1.0 
+charge_efficiency = 1.0
 # Thevenin model values
 #values for 6.1.26
 # R0 = 0.018
@@ -128,7 +142,7 @@ df = df.interpolate(axis=0)
 ncells = 8
 battery_simulation = Battery(battery_capacity, R0, R1, C1, ncells, charge_efficiency)
 
-battery_simulation.actual_capacity =  0.68* battery_simulation.total_capacity
+battery_simulation.actual_capacity =  0.6* battery_simulation.total_capacity
 #battery_simulation.plot_SOCV_relation()
 # sdf
 #%%
@@ -168,11 +182,20 @@ def update_step(ds):
                u=actual_current)
     Kf.update(mes_voltage[-1] -  R0 * actual_current, u=actual_current)
     Kf.x[0,0]
-    true_SoC.append(battery_simulation.state_of_charge)
-    estim_SoC.append(Kf.x[0,0])
+    
+    if (Kf.x[0,0] < 1.0) or  (abs(actual_current)> 5.):
+        true_SoC.append(battery_simulation.state_of_charge)
+        estim_SoC.append(Kf.x[0,0])
+    else:
+        battery_simulation.set_state_of_charge(SOC=1.0)
+        true_SoC.append(battery_simulation.state_of_charge)
+        estim_SoC.append(Kf.x[0,0])
 
     OCV.append(battery_simulation.OCV)
     est_OCV.append(mes_voltage[-1]  +  R0 * actual_current)
+    
+
+        
     # est_OCV.append(Kf.y_pred +  R0 * actual_current)
     # if battery_simulation.state_of_charge < .4:
         

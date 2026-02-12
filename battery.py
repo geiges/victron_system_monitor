@@ -68,6 +68,10 @@ class Battery:
     def voltage(self):
         return self.OCV - self.R0 * self.current - self._RC_voltage
 
+
+    def set_state_of_charge(self, SOC):
+        self.actual_capacity = self.total_capacity * SOC
+        
     @property
     def state_of_charge(self):
         return self.actual_capacity/self.total_capacity

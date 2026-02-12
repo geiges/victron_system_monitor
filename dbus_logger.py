@@ -56,7 +56,7 @@ def update_existing_file(filename: str,
         # df.reindex(columns=fieldnames[1:]).to_csv(filename)
     print(f".done in {time.time() - tt:2.2f}s")
     
-    # return date_str
+    return date_str
 
 def retrieve_data(bus, variables_to_log, debug):
     

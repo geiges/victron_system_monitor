@@ -22,6 +22,20 @@ timezone = pytz.timezone(config.tz)
 
 parallel_SOC = True
 
+def get_variables_to_log(dbus):
+    
+    variables_to_log = dict()
+    
+    #loop over configures system components
+    for component in config.system_components:
+        
+        if component.is_avaiable_on_bus(dbus):
+            # component is currently connected
+            variables_to_log.update(component.get_device_variables())
+            
+    return variables_to_log
+            
+
 def update_existing_file(filename: str, 
                          fieldnames: list[str],
                          soc_model,
@@ -80,6 +94,9 @@ def retrieve_data(bus, variables_to_log, debug):
 
 def update_loop(debug=False):
     
+    bus = SystemBus()
+    
+    variables_to_log = get_variables_to_log(bus)
     
     if parallel_SOC:
         import SOC_estimator as soc
@@ -91,7 +108,7 @@ def update_loop(debug=False):
         
     # get variable_names from config
     fieldnames = (
-        ["time"] + list(config.variables_to_log.keys())
+        ["time"] + list(variables_to_log.keys())
         )
         
     now = datetime.now(tz=timezone)
@@ -106,7 +123,7 @@ def update_loop(debug=False):
     else:
         write_header= False
     
-    bus = SystemBus()
+    
     
     # wait until next full interval before first sync
     if not debug:
@@ -119,7 +136,7 @@ def update_loop(debug=False):
         date_str =  now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
         try:
-            data = retrieve_data(bus, config.variables_to_log, debug)
+            data = retrieve_data(bus, variables_to_log, debug)
         except Exception as E:
             data = None
             if debug:

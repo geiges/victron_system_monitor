@@ -61,8 +61,11 @@ def update_existing_file(filename: str,
     reader = csv.DictReader(open(filename))
     columns = reader.fieldnames
     # update file if new columns or new order
-    changed_columns = set(fieldnames) != set(columns)
-    if changed_columns:
+    
+    # header is only updated if more fieldnames are not all in existing columns
+    update_header = not set(fieldnames).issubset(set(columns))
+     
+    if update_header:
         #
         shutil.move(filename, filename + '_previous_data')
         reader = csv.DictReader(open(filename + '_previous_data'))
@@ -72,7 +75,7 @@ def update_existing_file(filename: str,
             for row in reader:
                 writer.writerow(row)
         
-        # df.reindex(columns=fieldnames[1:]).to_csv(filename)
+        
     print(f".done in {time.time() - tt:2.2f}s")
     
     return date_str
@@ -135,6 +138,11 @@ def update_loop(debug=False):
         time.sleep(config.log_interval - (now % timedelta(config.log_interval).total_seconds()))
 
     while True:
+        
+        
+        
+        
+        
         now = datetime.now(tz=timezone) # current date and time
 
         now_str = now.strftime("%H:%M:%S")

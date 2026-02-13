@@ -74,6 +74,38 @@ class BaseComponent(object):
                     })
             return variables
         
+    def init_measurement_correction(self, connector_R0, voltage_offset):
+        """
+        Set connector resistance of cable connection and voltage offset in order
+        to process raw voltage measurements.
+        """
+        self.connector_R0 = connector_R0
+        self.voltage_offset = voltage_offset
+        
+    def voltage_measurement(self, raw_voltage_value, current):
+        """
+        Process raw voltage measurement from component. Processing does consider
+        the voltage drop/rise due to cable resistance for current flow and can
+        consider and additive offset.
+
+        Parameters
+        ----------
+        raw_voltage_value : float
+            
+        current : flaot
+            
+
+        Returns
+        -------
+        voltage : flaot
+
+        """
+        if self.connector_R0 is None:
+            raise(Exception('Connector resisitance not set'))
+        else:
+             voltage = raw_voltage_value - (self.connector_R0 * current) + self.voltage_offset
+        return voltage
+            
 
 class VictronSystem(BaseComponent):
     """
@@ -89,6 +121,9 @@ class VictronSystem(BaseComponent):
         self.product_name = product_name
         self.short_name = short_name
         self.component_type = 'com.victronenergy.system'
+        
+        #for measurements
+        self.connector_R0 = None
         
     
 class VictronSolarCharger(BaseComponent):

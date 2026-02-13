@@ -20,7 +20,7 @@ import pytz
 
 timezone = pytz.timezone(config.tz)
 
-parallel_SOC = True
+simulate_battery = True
 
 def get_variables_to_log(dbus):
     
@@ -106,7 +106,7 @@ def update_loop(debug=False):
     
     variables_to_log, missing_components = get_variables_to_log(bus)
     
-    if parallel_SOC:
+    if simulate_battery:
         import SOC_estimator as soc
         
         soc_model = soc.SOC_estimator(soc.config_V1)

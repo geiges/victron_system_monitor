@@ -1,4 +1,4 @@
-time,Mppt150/power_yield,Mppt150/DC_0_voltage,mppt150/DC_0_current,mppt150/total_yield,multiplus/ac_power_output,multiplus/DC_0_voltage,multiplus/_current,multiplus/alarm_temperature,multiplus/alarm_low_battery,multiplus/alarm_overload,system/battery_voltage,system/battery_current,system/battery_temperature
+time,mppt150/power_yield,mppt150/DC_0_voltage,mppt150/DC_0_current,mppt150/total_yield,multiplus/AC_power_output,multiplus/DC_0_voltage,multiplus/DC_0_current,multiplus/alarm_temperature,multiplus/alarm_low_battery,multiplus/alarm_overload,system/battery_voltage,system/battery_current,system/battery_temperature
 08:43:08,148,26.93,5.4,104.09,0,26.93,0,0,0,0,26.93,5.4,14
 08:43:13,148,26.93,5.3,104.09,0,26.93,0,0,0,0,26.93,5.3,14
 08:43:18,147,26.93,5.3,104.09,0,26.93,0,0,0,0,26.93,5.3,14

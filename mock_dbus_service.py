@@ -25,19 +25,19 @@ from gi.repository import GLib, Gio
 # Column name -> (bus_name, object_path) mapping
 # ---------------------------------------------------------------------------
 COLUMN_MAP = {
-    "battery_voltage_system":       ("com.victronenergy.system",                  "/Dc/Battery/Voltage"),
-    "battery_current_system":       ("com.victronenergy.system",                  "/Dc/Battery/Current"),
-    "battery_temperature_system":   ("com.victronenergy.system",                  "/Dc/Battery/Temperature"),
-    "power_yield_mppt150":          ("com.victronenergy.solarcharger.ttyUSB0",    "/Yield/Power"),
-    "battery_voltage_mppt150":      ("com.victronenergy.solarcharger.ttyUSB0",    "/Dc/0/Voltage"),
-    "battery_current_mppt150":      ("com.victronenergy.solarcharger.ttyUSB0",    "/Dc/0/Current"),
-    "total_yield_mppt150":          ("com.victronenergy.solarcharger.ttyUSB0",    "/Yield/System"),
-    "ac_power_output_multiplus":    ("com.victronenergy.vebus.ttyUSB1",           "/Ac/Out/P"),
-    "battery_voltage_multiplus":    ("com.victronenergy.vebus.ttyUSB1",           "/Dc/0/Voltage"),
-    "battery_current_multiplus":    ("com.victronenergy.vebus.ttyUSB1",           "/Dc/0/Current"),
-    "alarm_temperature_multiplus":  ("com.victronenergy.vebus.ttyUSB1",           "/Alarms/TemperatureSensor"),
-    "alarm_low_battery_multiplus":  ("com.victronenergy.vebus.ttyUSB1",           "/Alarms/LowBattery"),
-    "alarm_overload_multiplus":     ("com.victronenergy.vebus.ttyUSB1",           "/Alarms/Overload"),
+    "system/battery_voltage":       ("com.victronenergy.system",                  "/Dc/Battery/Voltage"),
+    "system/battery_current":       ("com.victronenergy.system",                  "/Dc/Battery/Current"),
+    "system/battery_temperature":   ("com.victronenergy.system",                  "/Dc/Battery/Temperature"),
+    "mppt150/power_yield":          ("com.victronenergy.solarcharger.ttyUSB0",    "/Yield/Power"),
+    "mppt150/DC_0_voltage":         ("com.victronenergy.solarcharger.ttyUSB0",    "/Dc/0/Voltage"),
+    "mppt150/DC_0_current":         ("com.victronenergy.solarcharger.ttyUSB0",    "/Dc/0/Current"),
+    "mppt150/total_yield":          ("com.victronenergy.solarcharger.ttyUSB0",    "/Yield/System"),
+    "multiplus/AC_power_output":    ("com.victronenergy.vebus.ttyUSB1",           "/Ac/Out/P"),
+    "multiplus/DC_0_voltage":       ("com.victronenergy.vebus.ttyUSB1",           "/Dc/0/Voltage"),
+    "multiplus/DC_0_current":       ("com.victronenergy.vebus.ttyUSB1",           "/Dc/0/Current"),
+    "multiplus/alarm_temperature":  ("com.victronenergy.vebus.ttyUSB1",           "/Alarms/TemperatureSensor"),
+    "multiplus/alarm_low_battery":  ("com.victronenergy.vebus.ttyUSB1",           "/Alarms/LowBattery"),
+    "multiplus/alarm_overload":     ("com.victronenergy.vebus.ttyUSB1",           "/Alarms/Overload"),
 }
 
 PRODUCT_NAMES = {

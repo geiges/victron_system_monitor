@@ -30,6 +30,28 @@ class Power_system(dict):
             
             self[component.short_name] = component
             
+    
+    def get_components(self):
+        return self.keys()
+    
+    def get_variables_to_log(self, dbus):
+        
+        variables_to_log = dict()
+        missing_components = list()
+        
+        #loop over configures system components
+        for component in self.values():
+            
+            if component.is_avaiable_on_bus(dbus):
+                # component is currently connected
+                variables_to_log.update(component.get_device_variables(dbus))
+            else:
+                missing_components.append(component)
+                
+        if len(missing_components)> 0:
+            print(f'The following components are unresponsive: {missing_components}')
+        return variables_to_log, missing_components
+            
             
 def init_power_system(system_components,
                       measurement_components):

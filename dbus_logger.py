@@ -18,27 +18,13 @@ from pydbus import SystemBus
 from datetime import datetime, timedelta
 import pytz
 
+import power_system
+
 timezone = pytz.timezone(config.tz)
 
 simulate_battery = True
 
-def get_variables_to_log(dbus):
-    
-    variables_to_log = dict()
-    missing_components = list()
-    
-    #loop over configures system components
-    for component in config.system_components:
-        
-        if component.is_avaiable_on_bus(dbus):
-            # component is currently connected
-            variables_to_log.update(component.get_device_variables(dbus))
-        else:
-            missing_components.append(component)
-            
-    if len(missing_components)> 0:
-        print(f'The following components are unresponsive: {missing_components}')
-    return variables_to_log, missing_components
+
             
 
 def update_existing_file(filename: str, 
@@ -102,9 +88,18 @@ def retrieve_data(bus, variables_to_log, debug):
 
 def update_loop(debug=False):
     
-    bus = SystemBus()
+    if os.environ.get("VICTRON_TEST_SESSION_BUS"):
+        from pydbus import SessionBus
+        bus = SessionBus()
+    else:
+        bus = SystemBus()
     
-    variables_to_log, missing_components = get_variables_to_log(bus)
+    psystem = power_system.init_power_system(system_components = config.system_components,
+                                             measurement_components=config.measurement_components
+                                             )
+    
+    
+    variables_to_log, missing_components = psystem.get_variables_to_log(bus)
     
     if simulate_battery:
         import SOC_estimator as soc
@@ -130,18 +125,12 @@ def update_loop(debug=False):
         write_header = True
     else:
         write_header= False
-    
-    
-    
+
     # wait until next full interval before first sync
     if not debug:
         time.sleep(config.log_interval - (now % timedelta(config.log_interval).total_seconds()))
 
     while True:
-        
-        
-        
-        
         
         now = datetime.now(tz=timezone) # current date and time
 

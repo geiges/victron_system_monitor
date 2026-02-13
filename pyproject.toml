@@ -9,4 +9,10 @@ dependencies = [
     #    "pandas",
     "pydbus",
     "pygobject>=3.54.5",
+    "pytz>=2025.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
 ]

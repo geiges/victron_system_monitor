@@ -19,7 +19,7 @@ non_numeric_var = []
 
 
 #system setup
-_system_components = [
+system_components = [
     components.VictronSystem(None, short_name='system'),
     components.VictronSolarCharger('SmartSolar Charger MPPT 150/35', short_name='mppt150'),
     components.VictronMultiplusII('MultiPlus-II 24/3000/70-32', short_name='multiplus'),
@@ -35,11 +35,6 @@ measurement_components = {
         'voltage_offset' :  -0.16},
     }
 
-power_system = power_system.Power_system(_system_components)
-
-for component, measurement_setup in measurement_components.items():
-    power_system[component].init_measurement_correction(**measurement_setup)
-    
 
 try:
     # try to import actual config file, failes if no personal file is found

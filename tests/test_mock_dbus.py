@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 import time
-
 import pytest
 
 
@@ -15,7 +14,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 MOCK_SCRIPT = os.path.join(os.path.dirname(__file__), "..", "mock_dbus_service.py")
-CSV_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "log_26-02-13.csv")
+CSV_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "log_testing.csv")
 
 
 def _wait_for_bus_name(bus, name, timeout=10):

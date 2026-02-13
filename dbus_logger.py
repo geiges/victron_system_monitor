@@ -22,7 +22,7 @@ import power_system
 
 timezone = pytz.timezone(config.tz)
 
-simulate_battery = True
+simulate_battery = False
 
 
             

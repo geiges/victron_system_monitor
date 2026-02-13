@@ -67,7 +67,7 @@ class BaseComponent(object):
             for variable in self.component_variables:
                 
                 variables.update({
-                    f"{variable.basename}_{self.short_name}": {
+                    f"{self.short_name}/{variable.basename}": {
                         "dbus_device" : interface_address,
                         "address" : variable.subaddress,
                         'unit' : variable.unit},
@@ -132,8 +132,8 @@ class VictronSolarCharger(BaseComponent):
     """
     component_variables =[
         VariableType(basename = "power_yield", subaddress = "/Yield/Power", unit='W'),
-        VariableType(basename = "battery_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
-        VariableType(basename = "battery_current", subaddress = "/Dc/0/Current", unit='A'),
+        VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
+        VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     
@@ -148,9 +148,9 @@ class VictronMultiplusII(BaseComponent):
     Victron solar charger component
     """
     component_variables =[
-        VariableType(basename = "ac_power_output", subaddress = "/Ac/Out/P", unit='W'),
-        VariableType(basename = "battery_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
-        VariableType(basename = "battery_current", subaddress = "/Dc/0/Current", unit='A'),
+        VariableType(basename = "AC_power_output", subaddress = "/Ac/Out/P", unit='W'),
+        VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
+        VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
         VariableType(basename = "alarm_temperature", subaddress="/Alarms/TemperatureSensor", unit=''),
         VariableType(basename = "alarm_low_battery", subaddress="/Alarms/LowBattery", unit=''),
         VariableType(basename = "alarm_overload", subaddress="/Alarms/Overload", unit='')

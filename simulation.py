@@ -32,11 +32,11 @@ config_V1 = {
 
 
 class System_Simulation():
-    
+
     def __init__(self, sim_config, SOC, RC_voltage):
-        
-        
-        
+
+
+
         self.std_dev = 0.01
         self.time_step = sim_config['time_step'] # in seconds
 
@@ -46,84 +46,95 @@ class System_Simulation():
         self.C1 = sim_config['C1']
         self.ncells = sim_config['ncells']
         self.Q_tot = sim_config['Q_tot'] # in Ah
-        
+
         #system_properties
         self.charge_efficiency = sim_config['charge_efficiency']
 
-        
-        self.battery_simulation = Battery(self.Q_tot, 
-                                          self.R0, 
-                                          self.R1, 
-                                          self.C1, 
-                                          self.ncells, 
+
+        self.battery_simulation = Battery(self.Q_tot,
+                                          self.R0,
+                                          self.R1,
+                                          self.C1,
+                                          self.ncells,
                                           self.charge_efficiency)
-        
+
         self.set_state(SOC, RC_voltage)
-        
+
     def estimate_initial_SOC(self, voltage):
-        #TODO
-        pass
-    
+        """
+        Estimate initial SOC from an open-circuit voltage reading.
+        Uses the inverse of the OCV-SOC polynomial by finding the SOC
+        that minimizes |OCV(SOC) - voltage| within [0, 1].
+        Best used when battery current is near zero.
+        """
+        from scipy.optimize import minimize_scalar
+        result = minimize_scalar(
+            lambda soc: (self.battery_simulation.OCV_model(soc) - voltage) ** 2,
+            bounds=(0, 1),
+            method='bounded'
+        )
+        return float(result.x)
+
     def set_state(self, SOC, RC_voltage= 0):
         print(f'Setting state to SOC={SOC} and RC_voltage={RC_voltage}')
         self.battery_simulation.actual_capacity =  SOC* self.battery_simulation.total_capacity
-    
+
         print('setting up Kalman filter')
         self.Kf = ExtendedKalmanFilter(
-                          self.std_dev, 
+                          self.std_dev,
                           self.battery_simulation)
-        
+
         self.Kf.set_state(SOC, RC_voltage)
-   
+
 
     def update(self,
                raw_data,
                time_delta,
                psystem):
-        
-        battery_current_var = 'system/battery_current' 
-        battery_voltage_var = 'system/battery_voltage' 
-        
+
+        battery_current_var = 'system/battery_current'
+        battery_voltage_var = 'system/battery_voltage'
+
         ## coulomb counting
         sim_data = dict(time=raw_data['time'])
-        
+
         # Simulate currents
         # reduce by const consumption for each component
         total_const_consumption = 0.
-        
+
         non_system_variables = [x for x in raw_data.keys() if  not x.startswith('system')]
-        
+
         for var in [x for x in non_system_variables if x.endswith('current')]:
             # get compenent name and comp from varible name
-            comp = psystem[var.split('/')[0]]  
+            comp = psystem[var.split('/')[0]]
             sim_data[var] = raw_data[var] - comp.const_consumption
             total_const_consumption +=  comp.const_consumption
-            
-        
+
+
         # total battery current
         sim_data[battery_current_var] = raw_data[battery_current_var] - total_const_consumption
-            
-                
-        
+
+
+
         # Simulate voltages
         voltages_to_average = []
         for var in [x for x in non_system_variables if x.endswith('voltage')]:
- 
+
             # get compenent name and comp from varible name
-            comp = psystem[var.split('/')[0]]   
-            
+            comp = psystem[var.split('/')[0]]
+
             # current variable that relates to the voltage variable
             curr_var = var.replace('voltage', 'current')
-            
+
             current_value = raw_data[curr_var] if curr_var in raw_data.keys() else 0
-            
+
             # use component method to correct for cable losses and offsets
             sim_data[var] = comp.voltage_measurement(
                 raw_data[var],
                 current_value)
-            
+
             voltages_to_average.append(sim_data[var])
-            
+
         sim_data[battery_voltage_var] = sum(voltages_to_average) / len(voltages_to_average)
 
         # simulate SOC
@@ -131,23 +142,23 @@ class System_Simulation():
         if time_delta is not None:
             self.battery_simulation.update(time_delta, sim_data[battery_current_var])
 
-        
+
         SOC_counted = self.battery_simulation.state_of_charge
-        
+
 
         # ENKF updating
         if time_delta is not None:
-            self.Kf.predict(time_delta=time_delta, 
+            self.Kf.predict(time_delta=time_delta,
                             u=sim_data[battery_current_var])
-        
+
         OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
         if time_delta is not None:
             self.Kf.update(OCV_est, sim_data[battery_current_var])
-        
+
         estimated_SOC = float(self.Kf.x[0,0])
-        
-    
+
+
         sim_data['OCV_est'] = OCV_est
         sim_data['SOC_Kf'] = estimated_SOC
         sim_data['SOC_counted'] = SOC_counted
-        return sim_data      
+        return sim_data

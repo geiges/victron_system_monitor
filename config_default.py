@@ -16,16 +16,17 @@ round_digits = 3
 tz = 'Europe/Berlin'
 
 non_numeric_var = []
+simulate_system = True
 
 
 #system setup
 system_components = [
     components.VictronSystem(None, short_name='system'),
-    components.VictronSolarCharger('SmartSolar Charger MPPT 150/35', 
-                                   short_name='mppt150', 
+    components.VictronSolarCharger('SmartSolar Charger MPPT 150/35',
+                                   short_name='mppt150',
                                    const_consumption=0.2),
-    components.VictronMultiplusII('MultiPlus-II 24/3000/70-32', 
-                                  short_name='multiplus', 
+    components.VictronMultiplusII('MultiPlus-II 24/3000/70-32',
+                                  short_name='multiplus',
                                   const_consumption=0.1)
     ]
 
@@ -43,8 +44,6 @@ measurement_components = {
 try:
     # try to import actual config file, failes if no personal file is found
     from config import *
-    
-except:
+
+except ImportError:
     print('Using default_config.py, create config.py for personal setup ')
-    
-    

@@ -140,7 +140,7 @@ class System_Simulation():
         # simulate SOC
 
         if time_delta is not None:
-            self.battery_simulation.update(time_delta, sim_data[battery_current_var])
+            self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
 
 
         SOC_counted = self.battery_simulation.state_of_charge

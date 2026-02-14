@@ -59,7 +59,7 @@ class Power_system(dict):
                 
         if len(missing_components)> 0:
             print(f'The following components are unresponsive: {missing_components}')
-            sdf
+            
         return variables_to_log, missing_components
             
             

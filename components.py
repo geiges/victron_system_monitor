@@ -18,9 +18,21 @@ class BaseComponent(object):
     Base class for system components to provide some common functions
     """
     
-    def __init__(self, product_name):
+    def __init__(self, 
+                 product_name, 
+                 short_name, 
+                 component_type, 
+                 const_consumption):
+        
         # Root string to identify available components on dbus
-        self.component_type = None
+        self.product_name = product_name
+        self.short_name = short_name
+        self.component_type = component_type
+        self.const_consumption = const_consumption
+        
+        self.variable_list = [
+            f"{self.short_name}/{var.basename}" for var in self.component_variables
+            ]
         
     def _components_on_bus(self, dbus):
         """
@@ -112,18 +124,17 @@ class VictronSystem(BaseComponent):
     Victron solar charger component
     """
     component_variables =[
-        VariableType(basename = "battery_voltage", subaddress = "/Dc/Battery/Voltage", unit='V'), 
+        VariableType(basename = "battery_voltage", subaddress = "/Dc/Battery/Voltage", unit='V'),
         VariableType(basename = "battery_current", subaddress = "/Dc/Battery/Current", unit='A'),
         VariableType(basename = "battery_temperature", subaddress = "/Dc/Battery/Temperature", unit='°C'),
         ]
     
-    def __init__(self, product_name, short_name):
-        self.product_name = product_name
-        self.short_name = short_name
-        self.component_type = 'com.victronenergy.system'
-        
+    def __init__(self, product_name, short_name, const_consumption=0.0):
+
+        component_type =  'com.victronenergy.system'
+        super().__init__(product_name, short_name, component_type, const_consumption) 
         #for measurements
-        self.connector_R0 = None
+        
         
     
 class VictronSolarCharger(BaseComponent):
@@ -137,11 +148,11 @@ class VictronSolarCharger(BaseComponent):
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     
-    def __init__(self, product_name, short_name):
-        self.product_name = product_name
-        self.short_name = short_name
-        self.component_type = 'com.victronenergy.solarcharger'
-        
+    def __init__(self, product_name, short_name, const_consumption=0.0):
+         
+        component_type = 'com.victronenergy.solarcharger'
+        super().__init__(product_name, short_name, component_type, const_consumption) 
+        self.connector_R0 = None
         
 class VictronMultiplusII(BaseComponent):
     """
@@ -156,13 +167,15 @@ class VictronMultiplusII(BaseComponent):
         VariableType(basename = "alarm_overload", subaddress="/Alarms/Overload", unit='')
         ]
     
-    def __init__(self, product_name, short_name):
-        self.product_name = product_name
-        self.short_name = short_name
-        self.component_type = 'com.victronenergy.vebus'
+    def __init__(self, product_name, short_name, const_consumption=0.0):
+
+        component_type ='com.victronenergy.vebus'
+        super().__init__(product_name, short_name, component_type, const_consumption) 
+        self.connector_R0 = None
         
 
-        
+class VictronBatteryMonitor(BaseComponent):
+    pass # not implemented
         
 
             
@@ -170,5 +183,5 @@ class VictronMultiplusII(BaseComponent):
 if __name__ == "__main__":
     #testing
     mppt = VictronSolarCharger('SmartSolar Charger MPPT 150/35', short_name='mppt150')
-    inverter = VictronMultplusII('MultiPlus-II 24/3000/70-32', short_name='multiplus')
-    system = VictronMultplusII('-', short_name='system')
+    inverter = VictronMultiplusII('MultiPlus-II 24/3000/70-32', short_name='multiplus')
+    system = VictronSystem('-', short_name='system')

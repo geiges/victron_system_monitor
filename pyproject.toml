@@ -11,6 +11,10 @@ dependencies = [
     "pygobject>=3.54.5",
     "pytz>=2025.2",
 ]
+[project.optional-dependencies]
+cli = [
+  "spyder",
+]
 
 [dependency-groups]
 dev = [

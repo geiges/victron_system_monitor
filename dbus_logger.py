@@ -22,15 +22,13 @@ import power_system
 
 timezone = pytz.timezone(config.tz)
 
-simulate_battery = False
+simulate_system = True
 
 
             
 
 def update_existing_file(filename: str, 
-                         fieldnames: list[str],
-                         soc_model,
-                         measure) -> str:
+                         fieldnames: list[str],) -> str:
 
     now = datetime.now(tz=timezone) # current date and time
 
@@ -39,7 +37,7 @@ def update_existing_file(filename: str,
     # date_str = pd.Timestamp.now().strftime(config.date_format)
     
     if not os.path.exists(filename):
-        return 
+        return 'NaT'
 
     tt = time.time()
     print("Loading from disk and extending with new columns..", end="")
@@ -88,6 +86,8 @@ def retrieve_data(bus, variables_to_log, debug):
 
 def update_loop(debug=False):
     
+    
+    t_previous = None
     if os.environ.get("VICTRON_TEST_SESSION_BUS"):
         from pydbus import SessionBus
         bus = SessionBus()
@@ -101,41 +101,50 @@ def update_loop(debug=False):
     
     variables_to_log, missing_components = psystem.get_variables_to_log(bus)
     
-    if simulate_battery:
-        import SOC_estimator as soc
+    if simulate_system:
+        import simulation 
         
-        soc_model = soc.SOC_estimator(soc.config_V1)
-        measure = soc.Measurement(**soc.measurement_config)
+        config_V1 = {
+            "Q_tot" : 210,
+            "R0" : 0.01,
+            "R1" : 0.04,
+            "C1" : 2000,
+            "time_step" : 60,
+            "ncells" : 8,
+            "std_dev" : 0.01,
+            "charge_efficiency" : 1.0,
+            'system_consuption' : 5, # in W
+            "version" : 'V1'
+        }
+        
+        simulator = simulation.System_Simulation(config_V1, SOC=0.5, RC_voltage=0.)
+        
     else:
-        soc_model, measure = None, None
+        simulator = None
         
     # get variable_names from config
     fieldnames = (
         ["time"] + list(variables_to_log.keys())
         )
         
-    now = datetime.now(tz=timezone)
+    t_now = datetime.now(tz=timezone)
     
-    date_str = now.strftime("%y-%m-%d")
+    date_str = t_now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"
-    update_existing_file(filename, fieldnames, soc_model, measure)
+    sim_filename = f"data/sim_{date_str}.csv"
+    old_date_str = update_existing_file(filename, fieldnames)
     
-    
-    if not os.path.exists(filename):
-        write_header = True
-    else:
-        write_header= False
 
     # wait until next full interval before first sync
     if not debug:
-        time.sleep(config.log_interval - (now % timedelta(config.log_interval).total_seconds()))
+        time.sleep(config.log_interval - (t_now % timedelta(config.log_interval).total_seconds()))
 
     while True:
         
-        now = datetime.now(tz=timezone) # current date and time
+        t_now = datetime.now(tz=timezone) # current date and time
 
-        now_str = now.strftime("%H:%M:%S")
-        date_str =  now.strftime("%y-%m-%d",)
+        now_str = t_now.strftime("%H:%M:%S")
+        date_str =  t_now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
         try:
             data = retrieve_data(bus, variables_to_log, debug)
@@ -146,13 +155,14 @@ def update_loop(debug=False):
                 print("Skipping this update loop")
         
         if data is not None:
-            with open(filename, mode="a") as f:
-                writer = DictWriter(f, fieldnames)
-                if write_header:
+            with open(filename, mode="a") as fid:
+                writer = DictWriter(fid, fieldnames)
+
+                if  date_str != old_date_str:
                     # new file was started we need to output the header
+                    print("Writing head for new file")
                     writer.writeheader()
-                    write_header = False
-    
+                    
                 row = dict(time=now_str)
     
                 # state = 0
@@ -178,12 +188,48 @@ def update_loop(debug=False):
                 # row["status"] = code
                 if debug:
                     print(row)
-                    print(now.strftime("%H:%M:%S"))
+                    print(t_now.strftime("%H:%M:%S"))
                 writer.writerow(row)
-                print(f".done in {(datetime.now(tz=timezone) - now).total_seconds():2.2f}s")
+                print(f".done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
 
-        t_calc =  datetime.now(tz=timezone) - now
-        #t_calc = time.time() - now
+
+        if simulate_system:
+           
+            t_sim = datetime.now(tz=timezone)
+            if t_previous is None:
+                time_delta = None
+            else:
+                time_delta = (t_now - t_previous).total_seconds()
+            sim_row = simulator.update(raw_data=row, 
+                                       time_delta=time_delta,
+                                       psystem=psystem)
+                        
+            with open(sim_filename, mode="a") as fid:
+                
+                sim_fieldnames = sim_row.keys()
+                writer = DictWriter(fid, sim_fieldnames)
+
+                if  date_str != old_date_str:
+                    # new file was started we need to output the header
+                    print("Writing head for new file")
+                    writer.writeheader()
+                    
+                    
+                   
+                    writer.writerow(sim_row)
+                if debug:
+                    print(sim_row)
+                    print(t_now.strftime("%H:%M:%S"))
+                print(f"Simulation done in {(datetime.now(tz=timezone) - t_sim).total_seconds():2.3f}s")
+
+
+        #replace old date string
+        old_date_str = date_str
+        
+        t_previous = t_now
+        t_calc =  datetime.now(tz=timezone) - t_now
+        
+        
         time.sleep(config.log_interval - t_calc.total_seconds())
 
 

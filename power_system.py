@@ -5,13 +5,14 @@ Created on Fri Feb 13 09:52:12 2026
 
 @author: and
 """
+import components
 
 class Power_system(dict):
     """
     System class to facilitate simple component access
     """
     
-    def __init__(self, components):
+    def __init__(self, system_components):
         """
         Setting up the system from a list of individual components. The property
         short_name is used as dict-like keys to manage the components access.
@@ -26,9 +27,17 @@ class Power_system(dict):
         None.
 
         """
-        for component in components:
+        
+        # if not battery monitor is available, other victron devices will 
+        # partly provide battery properties, yet not fully reliable. For simulation,
+        # an addition estimation step is required to improve battery properties.
+        self.has_battery_monitor = False
+        for component in system_components:
             
             self[component.short_name] = component
+            
+            if isinstance(component, components.VictronBatteryMonitor):
+                self.has_battery_monitor = True
             
     
     def get_components(self):
@@ -50,6 +59,7 @@ class Power_system(dict):
                 
         if len(missing_components)> 0:
             print(f'The following components are unresponsive: {missing_components}')
+            sdf
         return variables_to_log, missing_components
             
             

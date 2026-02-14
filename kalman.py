@@ -41,7 +41,7 @@ import math
 
 class ExtendedKalmanFilter(object):
 
-    def __init__(self, std_dev, time_step, battery_sim):
+    def __init__(self, std_dev, battery_sim):
         
 
         # self.battery_capacity = battery_capacity

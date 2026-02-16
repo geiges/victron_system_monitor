@@ -17,7 +17,7 @@ tz = 'Europe/Berlin'
 
 non_numeric_var = []
 simulate_system = True
-
+logger_skip_no_changes = True
 
 #system setup
 system_components = [

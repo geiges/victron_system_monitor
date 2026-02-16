@@ -77,17 +77,20 @@ def retrieve_data(bus, variables_to_log, debug):
             ).GetValue()
 
         try:
-            var_value = round(var_value,config.round_digits)
+            if var_name not in config.non_numeric_var:
+                var_value = round(var_value,config.round_digits)
             data[var_name] = var_value
         except Exception:
             print(f'Failed to read  {var_conf["address"]} from { var_conf["dbus_device"]}')
     return data
 
 
+
+
+
+
 def update_loop(debug=False):
 
-
-    t_previous = None
     if os.environ.get("VICTRON_TEST_SESSION_BUS"):
         from pydbus import SessionBus
         bus = SessionBus()
@@ -118,12 +121,61 @@ def update_loop(debug=False):
             "version" : 'V1'
         }
 
-        simulator = simulation.System_Simulation(config_V1, SOC=0.5, RC_voltage=0.)
+        simulator = simulation.System_Simulation(config_V1)
         sim_initialized = False
 
     else:
         simulator = None
         sim_initialized = True
+
+    def _write_headers(filename, fieldnames):
+        with open(filename, mode="a") as fid:
+            writer = DictWriter(fid, fieldnames)
+
+            print(f"Writing head for new file {filename}")
+            writer.writeheader()
+
+    def _write_data(filename, fieldnames, row_data, date_str,  old_date_str):
+        if data is not None:
+            with open(filename, mode="a") as fid:
+                
+
+                if  date_str != old_date_str:
+                    # new file was started we need to output the header
+                    _write_headers(filename, fieldnames)
+                
+
+
+                
+                # row.update(data)
+                writer = DictWriter(fid, fieldnames)
+                writer.writerow(row_data)
+                print(f".done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
+        
+    
+    def _simulate_and_write_data_row(row_data, sim_initialized, t_now, date_str,  old_date_str, sim_filename):
+        t_sim = datetime.now(tz=timezone)
+
+
+        sim_row = simulator.update(raw_data=row_data,
+                                   t_now = t_now,
+                                   psystem=psystem)
+
+        with open(sim_filename, mode="a") as fid:
+
+            sim_fieldnames = sim_row.keys()
+            writer = DictWriter(fid, sim_fieldnames)
+
+            if  date_str != old_date_str:
+                # new file was started we need to output the header
+                _write_headers(sim_filename, sim_fieldnames)
+
+            writer.writerow(sim_row)
+            if debug:
+                print(sim_row)
+                print(t_now.strftime("%H:%M:%S"))
+            print(f"Simulation done in {(datetime.now(tz=timezone) - t_sim).total_seconds():2.3f}s")
+
 
     # get variable_names from config
     fieldnames = (
@@ -136,7 +188,11 @@ def update_loop(debug=False):
     filename = f"data/log_{date_str}.csv"
     
     old_date_str = update_existing_file(filename, fieldnames)
-
+    
+    #flag if day changed
+    is_new_day = (old_date_str != date_str)
+    old_data = None
+    cached_data = None
 
     # wait until next full interval before first sync
     if not debug:
@@ -150,103 +206,66 @@ def update_loop(debug=False):
         date_str =  t_now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
         sim_filename = f"data/sim_{date_str}.csv"
+        
+
         try:
             data = retrieve_data(bus, variables_to_log, debug)
+            
         except Exception as E:
             data = None
             if debug:
                 print(f"Exception {E} was raised.")
                 print("Skipping this update loop")
 
-        if data is not None:
-            with open(filename, mode="a") as fid:
-                writer = DictWriter(fid, fieldnames)
-
-                if  date_str != old_date_str:
-                    # new file was started we need to output the header
-                    print("Writing head for new file")
-                    writer.writeheader()
+            
+        
+        
+        #print(data)
+        row_data = dict(time=now_str)
+        row_data.update(data)
+        
+        #flag if data dict is different from old 
+        data_changed = (data != old_data)
+        
+        if config.logger_skip_no_changes and (data_changed or is_new_day):
+            
+            if cached_data is not None:
+                print("Data changed in timestep {now_str} - writing out cached data for {cached_data['meas'][data']['time']")
+                _write_data(**cached_data['meas'])
+                _simulate_and_write_data_row(**cached_data['sim'])
+            
+            print(f"Writing data for  {row_data['time']}")    
+            
+            _write_data(filename, fieldnames, row_data, date_str,  old_date_str)
+            if simulate_system and data is not None:
+                _simulate_and_write_data_row(row_data, sim_initialized, t_now, date_str,  old_date_str, sim_filename)
                 
-                
-                
-                row = dict(time=now_str)
-
-                # state = 0
-
-                for var, value in data.items():
-
-
-                    if var not in config.non_numeric_var:
-                        try:
-                            value = float(value)
-                        except ValueError:
-                            value = ""
-                    row[var] = value
-
-                    # if var in status_mapping:
-                    #     exp = status_vars.index(var)
-                    #     if value not in status_mapping[var].keys():
-                    #         print(f"{var, value} not found")
-                    #     state_part = status_mapping[var][value]
-                    #     state += state_part * (10**exp)
-
-                # code = str(state).zfill(len(status_vars))
-                # row["status"] = code
-                if debug:
-                    print(row)
-                    print(t_now.strftime("%H:%M:%S"))
-                writer.writerow(row)
-                print(f".done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
-
-
-        if simulate_system and data is not None:
-
-            t_sim = datetime.now(tz=timezone)
-
-            if not sim_initialized:
-                # Use first battery voltage reading to estimate initial SOC
-                voltage_key = 'system/battery_voltage'
-                current_key = 'system/battery_current'
-                if voltage_key in row and current_key in row:
-                    v = float(row[voltage_key])
-                    i = float(row[current_key])
-                    if abs(i) < 2.0:
-                        initial_soc = simulator.estimate_initial_SOC(v)
-                        print(f'Estimated initial SOC from OCV={v:.2f}V: {initial_soc:.2%}')
-                        simulator.set_state(initial_soc, RC_voltage=0.)
-                    else:
-                        print(f'Current too high ({i:.1f}A) for OCV-based init, using default SOC=0.5')
-                sim_initialized = True
-
-            if t_previous is None:
-                time_delta = None
-            else:
-                time_delta = (t_now - t_previous).total_seconds()
-            sim_row = simulator.update(raw_data=row,
-                                       time_delta=time_delta,
-                                       psystem=psystem)
-
-            with open(sim_filename, mode="a") as fid:
-
-                sim_fieldnames = sim_row.keys()
-                writer = DictWriter(fid, sim_fieldnames)
-
-                if  date_str != old_date_str:
-                    # new file was started we need to output the header
-                    print("Writing head for new file")
-                    writer.writeheader()
-
-                writer.writerow(sim_row)
-                if debug:
-                    print(sim_row)
-                    print(t_now.strftime("%H:%M:%S"))
-                print(f"Simulation done in {(datetime.now(tz=timezone) - t_sim).total_seconds():2.3f}s")
-
-
+            old_data = data
+            cached_data = None
+        else:
+            
+            print(f"Data for {now_str} is identical - not writing data data, caching data row.")
+            cached_data = dict()
+            cached_data['meas'] = dict(filename=filename, 
+                                fieldnames=fieldnames, 
+                                row_data = row_data.copy(),
+                                date_str = date_str,  
+                                old_date_str = old_date_str)
+            
+            
+            cached_data['sim'] = dict(row_data=row_data,
+                                      sim_initialized = sim_initialized,
+                                      t_now = t_now,
+                                      date_str = date_str,  
+                                      old_date_str = old_date_str,
+                                      sim_filename = sim_filename)
+            old_data = data
+            
+            
         #replace old date string
         old_date_str = date_str
-
-        t_previous = t_now
+    
+            
         t_calc =  datetime.now(tz=timezone) - t_now
 
 

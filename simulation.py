@@ -34,9 +34,13 @@ config_V1 = {
 
 class System_Simulation():
 
-    def __init__(self, sim_config, SOC, RC_voltage):
+    default_init_SOC = .5
+    default_init_RV  = 0.0
+    
+    def __init__(self, sim_config):
 
 
+        
 
         self.R_var = sim_config['R_var']
         self.Q_soc = sim_config['Q_soc']
@@ -60,8 +64,9 @@ class System_Simulation():
                                           self.C1,
                                           self.ncells,
                                           self.charge_efficiency)
-
-        self.set_state(SOC, RC_voltage)
+        self.initilized = False
+        self.t_previous = None
+        # self.set_state(SOC, RC_voltage)
 
     def estimate_initial_SOC(self, voltage):
         """
@@ -91,8 +96,11 @@ class System_Simulation():
 
     def update(self,
                raw_data,
-               time_delta,
+               t_now,
                psystem):
+        
+       
+        
 
         battery_current_var = 'system/battery_current'
         battery_voltage_var = 'system/battery_voltage'
@@ -138,38 +146,54 @@ class System_Simulation():
             voltages_to_average.append(sim_data[var])
 
         sim_data[battery_voltage_var] = sum(voltages_to_average) / len(voltages_to_average)
+        
+        if not self.initilized:
+            
+            # initialize SOC             
+            voltage = sim_data['system/battery_voltage']
+            current = sim_data['system/battery_current']
+            
+            if abs(current) < 2.0:
+                initial_soc = self.estimate_initial_SOC(voltage)
+                print(f'Estimated initial SOC from OCV={voltage:.2f}V: {initial_soc:.2%}')
+                self.set_state(initial_soc, RC_voltage=0.)
+            else:
+                print(f'Current too high ({current:.1f}A) for OCV-based init, using default SOC=0.5')
+                self.set_state(self.default_init_SOC, self.default_init_RV)
+                    
+            self.initilized = True
+            OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
+            
+        else:
+            
+            # simulate SOC
+            time_delta = (t_now - self.t_previous).total_seconds()
+            
+            if time_delta is not None:
+                self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
 
-        # simulate SOC
-
-        if time_delta is not None:
-            self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
-
-
-
-
-
-        # ENKF updating
-        if time_delta is not None:
-            self.Kf.predict(time_delta=time_delta,
-                            u=sim_data[battery_current_var])
-
-        OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
-        if time_delta is not None:
-            self.Kf.update(OCV_est, sim_data[battery_current_var])
-
-        # updating counted SOC if Kf updated indicated full battery
-        # and battery current is below 5A
-        if (self.Kf.x[0,0] > 1.0) and  (abs(sim_data[battery_current_var]) < 5.):
-            self.battery_simulation.set_state_of_charge(SOC=1.0)
-
-        # updating counted SOC if Kf updated indicated empty battery
-        # and battery current is below 5A
-        if (self.Kf.x[0,0] < 0.0) and  (abs(sim_data[battery_current_var]) < 5.):
-            self.battery_simulation.set_state_of_charge(SOC=0.0)
-
-
+    
+            # ENKF updating
+            if time_delta is not None:
+                self.Kf.predict(time_delta=time_delta,
+                                u=sim_data[battery_current_var])
+    
+            OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
+            if time_delta is not None:
+                self.Kf.update(OCV_est, sim_data[battery_current_var])
+    
+            # updating counted SOC if Kf updated indicated full battery
+            # and battery current is below 5A
+            if (self.Kf.x[0,0] > 1.0) and  (abs(sim_data[battery_current_var]) < 5.):
+                self.battery_simulation.set_state_of_charge(SOC=1.0)
+    
+            # updating counted SOC if Kf updated indicated empty battery
+            # and battery current is below 5A
+            if (self.Kf.x[0,0] < 0.0) and  (abs(sim_data[battery_current_var]) < 5.):
+                self.battery_simulation.set_state_of_charge(SOC=0.0)
+    
+        self.t_previous = t_now
         estimated_SOC = float(self.Kf.x[0,0])
-
         SOC_counted = self.battery_simulation.state_of_charge
         sim_data['OCV_est'] = OCV_est
         sim_data['SOC_Kf'] = estimated_SOC

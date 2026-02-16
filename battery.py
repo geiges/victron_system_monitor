@@ -50,7 +50,7 @@ class Battery:
         self._current = current
         self.actual_capacity -= (self.current * time_delta) * self.charge_efficiency
         
-        if self.state_of_charge() > 1.0:
+        if self.state_of_charge > 1.0:
             print('Warning, SOC exceed 100%, correcting down to 100%')
             self.set_state_of_charge(1.0)
             

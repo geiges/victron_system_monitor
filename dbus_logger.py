@@ -66,7 +66,7 @@ def update_existing_file(filename: str,
 
 def retrieve_data(bus, variables_to_log, debug):
 
-    data = list()
+    data = dict()
     for var_name, var_conf in variables_to_log.items():
 
         if debug:
@@ -78,7 +78,7 @@ def retrieve_data(bus, variables_to_log, debug):
 
         try:
             var_value = round(var_value,config.round_digits)
-            data.append((var_name, var_value))
+            data[var_name] = var_value
         except Exception:
             print(f'Failed to read  {var_conf["address"]} from { var_conf["dbus_device"]}')
     return data
@@ -166,12 +166,14 @@ def update_loop(debug=False):
                     # new file was started we need to output the header
                     print("Writing head for new file")
                     writer.writeheader()
-
+                
+                
+                
                 row = dict(time=now_str)
 
                 # state = 0
 
-                for var, value in data:
+                for var, value in data.items():
 
 
                     if var not in config.non_numeric_var:

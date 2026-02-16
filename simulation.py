@@ -23,9 +23,10 @@ config_V1 = {
     "C1" : 2000,
     "time_step" : 60,
     "ncells" : 8,
-    "std_dev" : 0.01,
+    "R_var" : 0.5**2,   # measurement noise variance (V²)
+    "Q_soc" : 1e-6,     # process noise for SOC state
+    "Q_rc"  : 1e-6,     # process noise for RC voltage state
     "charge_efficiency" : 1.0,
-    'system_consumption' : 5, # in W
     "version" : 'V1'
 }
 
@@ -37,7 +38,9 @@ class System_Simulation():
 
 
 
-        self.std_dev = 0.01
+        self.R_var = sim_config['R_var']
+        self.Q_soc = sim_config['Q_soc']
+        self.Q_rc = sim_config['Q_rc']
         self.time_step = sim_config['time_step'] # in seconds
 
         # Battery properties
@@ -67,10 +70,13 @@ class System_Simulation():
         that minimizes |OCV(SOC) - voltage| within [0, 1].
         Best used when battery current is near zero.
         """
-        soc_values = np.linspace(0, 1, 1000)
-        errors = (self.battery_simulation.OCV_model(soc_values) - voltage) ** 2
-        best_idx = np.argmin(errors)
-        return float(soc_values[best_idx])
+        from scipy.optimize import minimize_scalar
+        result = minimize_scalar(
+            lambda soc: (self.battery_simulation.OCV_model(soc) - voltage) ** 2,
+            bounds=(0, 1),
+            method='bounded'
+        )
+        return float(result.x)
 
     def set_state(self, SOC, RC_voltage= 0):
         print(f'Setting state to SOC={SOC} and RC_voltage={RC_voltage}')
@@ -78,7 +84,9 @@ class System_Simulation():
 
         print('setting up Kalman filter')
         self.Kf = ExtendedKalmanFilter(
-                          self.std_dev,
+                          self.R_var,
+                          self.Q_soc,
+                          self.Q_rc,
                           self.battery_simulation)
 
         self.Kf.set_state(SOC, RC_voltage)
@@ -140,7 +148,7 @@ class System_Simulation():
             self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
 
 
-        
+
 
 
         # ENKF updating
@@ -151,18 +159,18 @@ class System_Simulation():
         OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
         if time_delta is not None:
             self.Kf.update(OCV_est, sim_data[battery_current_var])
-        
+
         # updating counted SOC if Kf updated indicated full battery
         # and battery current is below 5A
         if (self.Kf.x[0,0] > 1.0) and  (abs(sim_data[battery_current_var]) < 5.):
             battery_simulation.set_state_of_charge(SOC=1.0)
-        
+
         # updating counted SOC if Kf updated indicated empty battery
         # and battery current is below 5A
         if (self.Kf.x[0,0] < 0.0) and  (abs(sim_data[battery_current_var]) < 5.):
             battery_simulation.set_state_of_charge(SOC=0.0)
-           
-            
+
+
         estimated_SOC = float(self.Kf.x[0,0])
 
         SOC_counted = self.battery_simulation.state_of_charge

@@ -38,38 +38,38 @@ dates = [
      "26-01-31",
      "26-02-01",
      "26-02-02",
-     "26-02-03",    
+     "26-02-03",
      "26-02-04",
      "26-02-05",
      "26-02-06",
      "26-02-07",
      "26-02-08",
-     "26-02-09",    
+     "26-02-09",
      "26-02-10",
-     
-     "26-02-11",    
+
+     "26-02-11",
      "26-02-12",
          ]
 
 df = list()
 subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
 # subprocess.run(['sh', "rsync.sh"])
-for date in dates: 
+for date in dates:
     filename = f"log_{date}.csv"
     filepath = os.path.join('data', filename)
-    
+
     now = pd.Timestamp.now()
     date_file = pd.Timestamp('20' + date)
-    
+
     # subprocess.run(["scp", f"root@192.168.1.5:/data/python/victron_system_monitor/{filepath}*", "data/" ])
     _df = pd.read_csv(filepath, index_col=0)
-    
-    
-    
+
+
+
     idx_to_drop = _df.index[_df.index.str.contains('time')]
     _df = _df.drop(idx_to_drop)
     _df.index = [f'20{date} {x}' for x in _df.index]
-    
+
     _df= _df.astype(float)
     # pd.DatetimeIndex(_df.index)
     df.append(_df)
@@ -85,7 +85,7 @@ R_cabel_mppt = 0.011
 R_cable_inverter = 0.0035
 voltage_offset = -.1
 # MPPT voltage measurement
-df['battery_voltage_1'] = df.battery_voltage_mppt - (R_cabel_mppt * df.solar_current_mppt) 
+df['battery_voltage_1'] = df.battery_voltage_mppt - (R_cabel_mppt * df.solar_current_mppt)
 df['battery_voltage_2'] = df.battery_voltage_inverter - (R_cable_inverter * df.inverter_dc_input_current) +- 0.06
 df['est_battery_voltage'] = ((df.battery_voltage_1 + df.battery_voltage_2) / 2) + voltage_offset
 na_idx = df.index[df.est_battery_voltage.isnull()]
@@ -93,7 +93,7 @@ df.loc[na_idx,'est_battery_voltage']  = df.loc[na_idx,'battery_voltage_1']
 
 nanidx = df.battery_current.isnull()
 
-df.loc[nanidx, 'battery_current'] = df.loc[nanidx, 'battery_power'] / df.loc[nanidx, 'est_battery_voltage'] 
+df.loc[nanidx, 'battery_current'] = df.loc[nanidx, 'battery_power'] / df.loc[nanidx, 'est_battery_voltage']
 
 
 
@@ -102,7 +102,7 @@ const_consumption = 8   # W
 
 #df.solar_current_mppt = df.solar_current_mppt + (const_consumption /  df.battery_voltage_mppt)
 df.battery_power -= const_consumption
-df.battery_current -= const_consumption / df['est_battery_voltage'] 
+df.battery_current -= const_consumption / df['est_battery_voltage']
 
 df['battery_out'] = df.battery_power- df.solar_power_1
 
@@ -123,7 +123,7 @@ charge_efficiency = 1.0
 # R1 = 0.0003
 # C1 = 28000000
 
-# or 
+# or
 
 # R0 = 0.05
 
@@ -147,12 +147,14 @@ battery_simulation.actual_capacity =  0.6* battery_simulation.total_capacity
 # sdf
 #%%
 
-# measurement noise standard deviation
-std_dev = 1.
+# Kalman filter noise tuning
+R_var = 0.5**2    # measurement noise variance (V²) — voltage sensor + OCV model error
+Q_soc = 1e-6      # process noise for SOC state — coulomb counting uncertainty per step
+Q_rc  = 1e-6      # process noise for RC voltage state
 
 #get configured EKF
-Kf = ExtendedKalmanFilter(std_dev, time_step, battery_simulation)
-Kf.set_state(SOC=0.65, 
+Kf = ExtendedKalmanFilter(R_var, Q_soc, Q_rc, battery_simulation)
+Kf.set_state(SOC=0.65,
              RC_voltage = 0.0)
 time         = [0]
 true_SoC     = [battery_simulation.state_of_charge]
@@ -162,9 +164,9 @@ mes_voltage  = [battery_simulation.voltage]
 current      = [battery_simulation.current]
 OCV          = [battery_simulation.OCV]
 est_OCV      = [battery_simulation.OCV]
-   
+
 def update_step(ds):
-    
+
     measured_voltage = ds.est_battery_voltage
     actual_current = - ds.battery_current
     # actual_current = - ds.battery_power / ds.battery_voltage_inverter
@@ -175,14 +177,14 @@ def update_step(ds):
     current.append(actual_current)
     battery_simulation.voltage
     # true_voltage.append((ds.battery_voltage_inverter + ds.battery_voltage_mppt) / 2)
-    
+
     mes_voltage.append(measured_voltage)
     print(measured_voltage)
-    Kf.predict(time_delta=time_step, 
+    Kf.predict(time_delta=time_step,
                u=actual_current)
     Kf.update(mes_voltage[-1] -  R0 * actual_current, u=actual_current)
     Kf.x[0,0]
-    
+
     if (Kf.x[0,0] < 1.0) or  (abs(actual_current)> 5.):
         true_SoC.append(battery_simulation.state_of_charge)
         estim_SoC.append(Kf.x[0,0])
@@ -193,16 +195,16 @@ def update_step(ds):
 
     OCV.append(battery_simulation.OCV)
     est_OCV.append(mes_voltage[-1]  +  R0 * actual_current)
-    
 
-        
+
+
     # est_OCV.append(Kf.y_pred +  R0 * actual_current)
     # if battery_simulation.state_of_charge < .4:
-        
-    
+
+
 for t_idx, ds in df.iterrows():
     update_step(ds)
-   
+
 df["estimated_SOC"] =  estim_SoC[1:]
 df["true_SOC"] =  true_SoC[1:]
 df["OCV"] =  OCV[1:]
@@ -215,7 +217,7 @@ df["est_OCV"] =  est_OCV[1:]
 fig = plt.figure('battery')
 plt.clf()
 ax1 = plt.subplot(3,1,1)
-# Voltage 
+# Voltage
 df[['battery_voltage_mppt','battery_voltage_inverter', 'battery_voltage_1','battery_voltage_2','OCV', "est_OCV"]].plot(ax=ax1)
 plt.grid('on')
 
@@ -233,7 +235,7 @@ ax_twin.tick_params(axis='y', labelcolor=color)
 
 ax.set_title('Fluxes [W]')
 
-plt.legend()    
+plt.legend()
 
 
 ax =  plt.subplot(3,1,3, sharex = ax1)
@@ -262,4 +264,3 @@ print(f"Total AC inverter output today: {output_today.iloc[-1]:2.2f} kWh" )
 print(f"Total solar harvest today: {cum_yielt_today.iloc[-1]:2.2f} kWh" )
 
 plt.tight_layout()
-    

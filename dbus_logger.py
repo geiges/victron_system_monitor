@@ -111,9 +111,10 @@ def update_loop(debug=False):
             "C1" : 2000,
             "time_step" : 60,
             "ncells" : 8,
-            "std_dev" : 0.01,
+            "R_var" : 0.5**2,   # measurement noise variance (V²)
+            "Q_soc" : 1e-6,     # process noise for SOC state
+            "Q_rc"  : 1e-6,     # process noise for RC voltage state
             "charge_efficiency" : 1.0,
-            'system_consuption' : 5, # in W
             "version" : 'V1'
         }
 

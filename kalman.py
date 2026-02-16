@@ -41,25 +41,34 @@ import math
 
 class ExtendedKalmanFilter(object):
 
-    def __init__(self, std_dev, battery_sim):
+    def __init__(self, R_var, Q_soc, Q_rc, battery_sim):
+        """
+        Parameters
+        ----------
+        R_var : float
+            Measurement noise variance (V²). How much you distrust the
+            voltage measurement as an SOC indicator.
+        Q_soc : float
+            Process noise variance for the SOC state. How much you
+            distrust coulomb counting per time step.
+        Q_rc : float
+            Process noise variance for the RC voltage state.
+        battery_sim : Battery
+            Battery model instance.
+        """
 
-
-        # self.battery_capacity = battery_capacity
         self.battery_sim = battery_sim
 
+        # measurement noise variance (V²)
+        self._R_var = R_var
 
-        var = std_dev ** 2
-
-        # measurement noise
-        self._var = var
-
-        # state covariance
-        self._P = np.matrix([[var, 0],\
-                       [0, var]])
+        # state covariance — initial uncertainty
+        self._P = np.matrix([[1e-2, 0],\
+                       [0, 1e-4]])
 
         # process noise covariance matrix
-        self._Q = np.matrix([[var/5e3, 0],\
-                       [0, var/5e3]])
+        self._Q = np.matrix([[Q_soc, 0],\
+                       [0, Q_rc]])
         def HJacobian(x):
             return np.matrix([[battery_sim.OCV_model.deriv(x[0,0]), -1]])
 
@@ -96,7 +105,7 @@ class ExtendedKalmanFilter(object):
 
         else:
             nfactor = 1
-        R = self._var * nfactor
+        R = self._R_var * nfactor
         x = self._x
 
         H = self._HJacobian(x)

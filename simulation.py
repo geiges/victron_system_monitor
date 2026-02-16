@@ -70,13 +70,10 @@ class System_Simulation():
         that minimizes |OCV(SOC) - voltage| within [0, 1].
         Best used when battery current is near zero.
         """
-        from scipy.optimize import minimize_scalar
-        result = minimize_scalar(
-            lambda soc: (self.battery_simulation.OCV_model(soc) - voltage) ** 2,
-            bounds=(0, 1),
-            method='bounded'
-        )
-        return float(result.x)
+        soc_values = np.linspace(0, 1, 1000)
+        errors = (self.battery_simulation.OCV_model(soc_values) - voltage) ** 2
+        best_idx = np.argmin(errors)
+        return float(soc_values[best_idx])
 
     def set_state(self, SOC, RC_voltage= 0):
         print(f'Setting state to SOC={SOC} and RC_voltage={RC_voltage}')

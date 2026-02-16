@@ -30,83 +30,15 @@ config_V1 = {
 }
 
 
-measurement_config ={
-    "R_cabel_mppt" : 0.011,
-    "R_cable_inverter": 0.0035,
-    "mppt_voltage_offset": -0.1,
-    "inverter_voltage_offset" : -0.16}
-
-class Measurement():
-    
-    def __init__(self, 
-                 R_cabel_mppt ,
-                 R_cable_inverter,
-                 mppt_voltage_offset,
-                 inverter_voltage_offset,
-                 system_consuption):
-        
-        self.R_cabel_mppt = R_cabel_mppt
-        self.R_cable_inverter = R_cable_inverter
-        self.mppt_voltage_offset = mppt_voltage_offset
-        self.inverter_voltage_offset = inverter_voltage_offset
-        self.system_consuption = system_consuption
-        
-        
-    def corrected_battery_voltage(self, 
-                current_mppt,
-                voltage_mppt,
-                inverter_current,
-                voltage_inverter):
-        
-        
-        #out = dict()
-        
-        current_mppt = current_mppt - (self.system_consuption / voltage_mppt)
-        estimated_voltage = 0
-        n_est= 0
-        if np.isnan(voltage_mppt):
-            
-            estimated_voltage += voltage_mppt - (self.R_cabel_mppt * current_mppt) + self.mppt_voltage_offset
-            n_est+=1
-        if np.isnan(voltage_inverter):
-                
-            estimated_voltage += voltage_inverter - (self.R_cable_inverter * inverter_current) + self.mppt_voltage_offset
-            n_est+=1
-             
-        if n_est > 0:
-             est_battery_voltage = (estimated_voltage / n_est )
-        
-        return est_battery_voltage, current_mppt
-    
-    def corrected_battery_current(self, 
-                                  voltage_mppt,
-                                  battery_current,
-                                  battery_power,
-                                  battery_voltage
-                                  ):
-        
-       if np.isnan(battery_current):
-
-        battery_current = battery_power / battery_voltage
-
-
-
-        # corretion for hidden constant consumers
-        # const_consumption = 8   # W
-
-        #df.solar_current_mppt = df.solar_current_mppt + (const_consumption /  df.battery_voltage_mppt)
-        df.battery_power -= const_consumption
-        df.battery_current -= const_consumption / df['est_battery_voltage'] 
 
 
 class SOC_estimator():
     
-    def __init__(self, config):
+    def __init__(self, config, SOC, RC_voltage):
         
         
         self.std_dev = 0.01
-        self.time_step = config['time_step'] # in seconds
-
+        
         # Battery properties
         self.R0 = config['R0']
         self.R1 = config['R1']
@@ -128,16 +60,19 @@ class SOC_estimator():
                                           self.ncells, 
                                           self.charge_efficiency)
         
+        self.set_state(SOC, RC_voltage)
+        
     def estimate_initial_SOC(self, voltage):
+        #TODO
         pass
     
     def set_state(self, SOC, RC_voltage= 0):
-        
+        print(f'Setting state to SOC={SOC} and RC_voltage={RC_voltage}')
         self.battery_simulation.actual_capacity =  SOC* self.battery_simulation.total_capacity
     
+        print('setting up Kalman filter')
         self.Kf = ExtendedKalmanFilter(
                           self.std_dev, 
-                          self.time_step, 
                           self.battery_simulation)
         
         self.Kf.set_state(SOC, RC_voltage)

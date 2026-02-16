@@ -41,7 +41,7 @@ import math
 
 class ExtendedKalmanFilter(object):
 
-    def __init__(self, std_dev, time_step, battery_sim):
+    def __init__(self, std_dev, battery_sim):
         
 
         # self.battery_capacity = battery_capacity
@@ -81,7 +81,7 @@ class ExtendedKalmanFilter(object):
                        [0, exp_coeff]])
 
         # control-input model
-        B = np.matrix([[-time_delta/(self.battery_sim.total_capacity * 3600)],\
+        B = np.matrix([[-time_delta/(self.battery_sim.total_capacity)],\
                        [ self.battery_sim.R1*(1-exp_coeff)]])
             
         return F, B

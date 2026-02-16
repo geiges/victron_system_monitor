@@ -98,7 +98,7 @@ def update_loop(debug=False):
     
     date_str = now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"
-    update_existing_file(filename, fieldnames, soc_model, measure)
+    old_date_str = update_existing_file(filename, fieldnames, soc_model, measure)
     
     
     if not os.path.exists(filename):
@@ -129,10 +129,14 @@ def update_loop(debug=False):
         if data is not None:
             with open(filename, mode="a") as f:
                 writer = DictWriter(f, fieldnames)
-                if write_header:
+                
+                
+                
+                if write_header or ( date_str != old_date_str):
                     # new file was started we need to output the header
                     writer.writeheader()
                     write_header = False
+                    old_date_str = date_str
     
                 row = dict(time=now_str)
     
@@ -161,6 +165,9 @@ def update_loop(debug=False):
                     print(row)
                     print(now.strftime("%H:%M:%S"))
                 writer.writerow(row)
+                
+                
+                
                 print(f".done in {(datetime.now(tz=timezone) - now).total_seconds():2.2f}s")
 
         t_calc =  datetime.now(tz=timezone) - now

@@ -160,12 +160,12 @@ class System_Simulation():
         # updating counted SOC if Kf updated indicated full battery
         # and battery current is below 5A
         if (self.Kf.x[0,0] > 1.0) and  (abs(sim_data[battery_current_var]) < 5.):
-            battery_simulation.set_state_of_charge(SOC=1.0)
+            self.battery_simulation.set_state_of_charge(SOC=1.0)
 
         # updating counted SOC if Kf updated indicated empty battery
         # and battery current is below 5A
         if (self.Kf.x[0,0] < 0.0) and  (abs(sim_data[battery_current_var]) < 5.):
-            battery_simulation.set_state_of_charge(SOC=0.0)
+            self.battery_simulation.set_state_of_charge(SOC=0.0)
 
 
         estimated_SOC = float(self.Kf.x[0,0])

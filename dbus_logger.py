@@ -133,7 +133,7 @@ def update_loop(debug=False):
 
     date_str = t_now.strftime("%y-%m-%d")
     filename = f"data/log_{date_str}.csv"
-    sim_filename = f"data/sim_{date_str}.csv"
+    
     old_date_str = update_existing_file(filename, fieldnames)
 
 
@@ -148,6 +148,7 @@ def update_loop(debug=False):
         now_str = t_now.strftime("%H:%M:%S")
         date_str =  t_now.strftime("%y-%m-%d",)
         filename = f"data/log_{date_str}.csv"
+        sim_filename = f"data/sim_{date_str}.csv"
         try:
             data = retrieve_data(bus, variables_to_log, debug)
         except Exception as E:

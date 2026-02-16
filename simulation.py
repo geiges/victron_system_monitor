@@ -143,7 +143,7 @@ class System_Simulation():
             self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
 
 
-        SOC_counted = self.battery_simulation.state_of_charge
+        
 
 
         # ENKF updating
@@ -154,10 +154,21 @@ class System_Simulation():
         OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
         if time_delta is not None:
             self.Kf.update(OCV_est, sim_data[battery_current_var])
-
+        
+        # updating counted SOC if Kf updated indicated full battery
+        # and battery current is below 5A
+        if (self.Kf.x[0,0] > 1.0) and  (abs(sim_data[battery_current_var]) < 5.):
+            battery_simulation.set_state_of_charge(SOC=1.0)
+        
+        # updating counted SOC if Kf updated indicated empty battery
+        # and battery current is below 5A
+        if (self.Kf.x[0,0] < 0.0) and  (abs(sim_data[battery_current_var]) < 5.):
+            battery_simulation.set_state_of_charge(SOC=0.0)
+           
+            
         estimated_SOC = float(self.Kf.x[0,0])
 
-
+        SOC_counted = self.battery_simulation.state_of_charge
         sim_data['OCV_est'] = OCV_est
         sim_data['SOC_Kf'] = estimated_SOC
         sim_data['SOC_counted'] = SOC_counted

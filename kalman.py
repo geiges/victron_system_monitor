@@ -41,10 +41,6 @@ import math
 
 class ExtendedKalmanFilter(object):
 
-<<<<<<< HEAD
-    def __init__(self, std_dev, battery_sim):
-        
-=======
     def __init__(self, R_var, Q_soc, Q_rc, battery_sim):
         """
         Parameters
@@ -60,7 +56,7 @@ class ExtendedKalmanFilter(object):
         battery_sim : Battery
             Battery model instance.
         """
->>>>>>> logger_update
+
 
         self.battery_sim = battery_sim
 

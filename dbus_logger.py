@@ -104,23 +104,7 @@ def update_loop(debug=False):
 
         simulator = simulation.System_Simulation(config.batt_config_V1)
         
-<<<<<<< HEAD
-    # get variable_names from config
-    fieldnames = (
-        ["time"] + list(config.variables_to_log.keys())
-        )
-        
-    now = datetime.now(tz=timezone)
-    
-    date_str = now.strftime("%y-%m-%d")
-    filename = f"data/log_{date_str}.csv"
-    old_date_str = update_existing_file(filename, fieldnames, soc_model, measure)
-    
-    
-    if not os.path.exists(filename):
-        write_header = True
-=======
->>>>>>> logger_update
+
     else:
         simulator = None
 
@@ -151,54 +135,7 @@ def update_loop(debug=False):
                 print("Skipping this update loop")
 
         if data is not None:
-<<<<<<< HEAD
-            with open(filename, mode="a") as f:
-                writer = DictWriter(f, fieldnames)
-                
-                
-                
-                if write_header or ( date_str != old_date_str):
-                    # new file was started we need to output the header
-                    writer.writeheader()
-                    write_header = False
-                    old_date_str = date_str
-    
-                row = dict(time=now_str)
-    
-                # state = 0
-    
-                for var, value in data:
-               
-                    
-                    if var not in config.non_numeric_var:
-                        try:
-                            value = float(value)
-                        except ValueError:
-                            value = ""
-                    row[var] = value
-    
-                    # if var in status_mapping:
-                    #     exp = status_vars.index(var)
-                    #     if value not in status_mapping[var].keys():
-                    #         print(f"{var, value} not found")
-                    #     state_part = status_mapping[var][value]
-                    #     state += state_part * (10**exp)
-    
-                # code = str(state).zfill(len(status_vars))
-                # row["status"] = code
-                if debug:
-                    print(row)
-                    print(now.strftime("%H:%M:%S"))
-                writer.writerow(row)
-                
-                
-                
-                print(f".done in {(datetime.now(tz=timezone) - now).total_seconds():2.2f}s")
 
-        t_calc =  datetime.now(tz=timezone) - now
-        #t_calc = time.time() - now
-        time.sleep(config.log_interval - t_calc.total_seconds())
-=======
             
             row_data = meas_logger.log_step(t_now, data)
             
@@ -218,7 +155,7 @@ def update_loop(debug=False):
         print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
   
         t_calc =  datetime.now(tz=timezone) - t_now
->>>>>>> logger_update
+
 
 
         time.sleep(max(0, config.log_interval - t_calc.total_seconds()))

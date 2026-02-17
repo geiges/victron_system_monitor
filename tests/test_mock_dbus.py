@@ -121,15 +121,13 @@ def test_retrieve_data_matches_csv(mock_service, session_bus, csv_first_row):
         measurement_components=config.measurement_components,
     )
     variables_to_log, _ = psystem.get_variables_to_log(session_bus)
-    data = dbus_logger.retrieve_data(session_bus, variables_to_log, debug=False)
-
-    retrieved = {name: value for name, value in data}
+    retrieved_data = dbus_logger.retrieve_data(session_bus, variables_to_log, debug=False)
 
     for col_name, expected_str in csv_first_row.items():
         if col_name == "time":
             continue
         expected = round(float(expected_str), config.round_digits)
-        actual = retrieved[col_name]
+        actual = retrieved_data[col_name]
         assert actual == expected, (
             f"{col_name}: expected {expected}, got {actual}"
         )

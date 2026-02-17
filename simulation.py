@@ -45,8 +45,7 @@ class System_Simulation():
         self.R_var = sim_config['R_var']
         self.Q_soc = sim_config['Q_soc']
         self.Q_rc = sim_config['Q_rc']
-        self.time_step = sim_config['time_step'] # in seconds
-
+        
         # Battery properties
         self.R0 = sim_config['R0']
         self.R1 = sim_config['R1']
@@ -198,4 +197,6 @@ class System_Simulation():
         sim_data['OCV_est'] = OCV_est
         sim_data['SOC_Kf'] = estimated_SOC
         sim_data['SOC_counted'] = SOC_counted
+        
+        print(f"SOC estimated: {estimated_SOC} / counted: {SOC_counted}")
         return sim_data

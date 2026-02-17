@@ -22,8 +22,6 @@ class Battery:
 
         self.charge_efficiency = charge_efficiency
 
-        # polynomial representation of OCV vs SoCself._rep__
-        #self._OCV_model = Polynomial([3.1400, 3.9905, -14.2391, 24.4140, -13.5688, -4.0621, 4.5056])
 
         single_cell_voltages = [2.5, 2.90, 3.0, 3.1, 3.2, 3.25, 3.3, 3.35, 3.4, 3.45, 3.65]
         single_cell_voltages = [2.5, 3.0, 3.19, 3.22, 3.25, 3.26, 3.27, 3.3, 3.32, 3.35, 3.5]
@@ -131,12 +129,7 @@ if __name__ == '__main__':
     plt.show()
     plt.legend()
     #%%
-    # OCV_model =  Polynomial([3.1400, 3.9905, -14.2391, 24.4140, -13.5688, -4.0621, 4.5056])
-    # OCV_model =  Polynomial([3.3, 2.61, -9.36, 19.7, -19.0, 6.9])
-    # # 66.235, -242.73\(a_{2}\): 364.5\(a_{3}\): -291\(a_{4}\): 134.7\(a_{5}\): -37.016\(a_{6}\): 6.4617\(a_{7}\): 2.9007
-    # x = np.linspace(0,1,5)
-    # y = OCV_model(x)
-    # plt.plot(x,y)
+
 
     # LFP values V over SOC
     V = [2.5, 3.0, 3.2, 3.22, 3.25, 3.26, 3.27, 3.3, 3.32, 3.35, 3.4]

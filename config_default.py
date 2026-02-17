@@ -11,6 +11,7 @@ import power_system
 #%%
 
 date_format = "%y-%m-%d"
+time_format = "%H:%M:%S"
 log_interval = 5 # seconds
 round_digits = 3
 tz = 'Europe/Berlin'
@@ -40,6 +41,19 @@ measurement_components = {
         'voltage_offset' :  -0.16},
     }
 
+# Battery Simulation configuration
+batt_config_V1 = {
+    "Q_tot" : 210,
+    "R0" : 0.01,
+    "R1" : 0.04,
+    "C1" : 2000,
+    "ncells" : 8,
+    "R_var" : 0.5**2,   # measurement noise variance (V²)
+    "Q_soc" : 1e-6,     # process noise for SOC state
+    "Q_rc"  : 1e-6,     # process noise for RC voltage state
+    "charge_efficiency" : 1.0,
+    "version" : 'V1'
+}
 
 try:
     # try to import actual config file, failes if no personal file is found

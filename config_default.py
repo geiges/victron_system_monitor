@@ -5,84 +5,59 @@ Created on Fri Jan  2 17:31:27 2026
 
 @author: and
 """
+import components
+import power_system
+
+#%%
 
 date_format = "%y-%m-%d"
+time_format = "%H:%M:%S"
 log_interval = 5 # seconds
 round_digits = 3
 tz = 'Europe/Berlin'
-#systemsetup
-
-mppt1 = "com.victronenergy.solarcharger.ttyUSB0"
-inverter1 = "com.victronenergy.vebus.ttyUSB1"
-system = "com.victronenergy.system"
-
-# dbus variabls to be logged
-
-variables_to_log = {
-    "solar_power_1" : 
-        {"dbus_device" : mppt1,
-         "address" : "/Yield/Power",
-         'unit' : "W"},
-    "battery_voltage_mppt" : 
-            {"dbus_device" : mppt1,
-             "address" : "/Dc/0/Voltage",
-             "unit":"V"},
-    "solar_current_mppt" : 
-            {"dbus_device" : mppt1,
-             "address" : "/Dc/0/Current",
-             "unit":"V"},
-    "solar_cum_yield" : 
-        {"dbus_device" : mppt1,
-         "address" : "/Yield/System",
-         "unit":"kWh"},
-    "battery_voltage_inverter" : 
-            {"dbus_device" : inverter1,
-             "address" : "/Dc/0/Voltage",
-             "unit":"V"},
-     "inverter_dc_input_power" : 
-             {"dbus_device" : inverter1,
-              "address" : "/Dc/0/Power",
-              "unit":"W"},
-     "inverter_dc_input_current" : 
-             {"dbus_device" : inverter1,
-              "address" : "/Dc/0/Current",
-              "unit":"W"},
-     "inverter_ac_output" : 
-            {"dbus_device" : inverter1,
-             "address" : "/Ac/Out/P",
-             "unit":"W"},
-    "battery_temperature" : 
-                {"dbus_device" : inverter1,
-                 "address" : "/Dc/0/Temperature",
-                 "unit":"°C"},
-    "inverter_alarm_temperature_status" : 
-                {"dbus_device" : inverter1,
-                 "address" : "/Alarms/TemperatureSensor",
-                 "unit":""},   
-    "inverter_alarm_low_battery" : 
-                {"dbus_device" : inverter1,
-                 "address" : "/Alarms/LowBattery",
-                 "unit":""},    
-    "inverter_alarm_overload" : 
-                {"dbus_device" : inverter1,
-                 "address" : "/Alarms/Overload",
-                 "unit":""},   
-    "battery_power" : 
-            {"dbus_device" : system,
-             "address" : "/Dc/Battery/Power",
-             "unit":"W"},
-     "battery_current" : 
-             {"dbus_device" : system,
-              "address" : "/Dc/Battery/Current",
-              "unit":"V"},
-        }
 
 non_numeric_var = []
+simulate_system = True
+logger_skip_no_changes = True
+
+#system setup
+system_components = [
+    components.VictronSystem(None, short_name='system'),
+    components.VictronSolarCharger('SmartSolar Charger MPPT 150/35',
+                                   short_name='mppt150',
+                                   const_consumption=0.2),
+    components.VictronMultiplusII('MultiPlus-II 24/3000/70-32',
+                                  short_name='multiplus',
+                                  const_consumption=0.1)
+    ]
+
+# system connectors (relevant for measurements)
+measurement_components = {
+    "mppt150": {
+        'connector_R0' :  0.011,
+        'voltage_offset' :  -0.1},
+    "multiplus": {
+        'connector_R0' :  0.0035,
+        'voltage_offset' :  -0.16},
+    }
+
+# Battery Simulation configuration
+batt_config_V1 = {
+    "Q_tot" : 210,
+    "R0" : 0.01,
+    "R1" : 0.04,
+    "C1" : 2000,
+    "ncells" : 8,
+    "R_var" : 0.5**2,   # measurement noise variance (V²)
+    "Q_soc" : 1e-6,     # process noise for SOC state
+    "Q_rc"  : 1e-6,     # process noise for RC voltage state
+    "charge_efficiency" : 1.0,
+    "version" : 'V1'
+}
 
 try:
+    # try to import actual config file, failes if no personal file is found
     from config import *
-    
-except:
+
+except ImportError:
     print('Using default_config.py, create config.py for personal setup ')
-    
-    

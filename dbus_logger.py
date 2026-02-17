@@ -5,7 +5,7 @@ Created on Fri Jan  2 17:53:44 2026
 
 @author: and
 """
-import os 
+import os
 import time
 import shutil
 # import pandas as pd
@@ -14,27 +14,29 @@ import config_default as config
 
 from csv import DictWriter
 from pydbus import SystemBus
-    
+from utils import File_Logger
+
 from datetime import datetime, timedelta
 import pytz
 
+import power_system
+
 timezone = pytz.timezone(config.tz)
 
-parallel_SOC = True
+simulate_system = config.simulate_system
 
-def update_existing_file(filename: str, 
-                         fieldnames: list[str],
-                         soc_model,
-                         measure) -> str:
+
+def update_existing_file(filename: str,
+                         fieldnames: list[str],) -> str:
 
     now = datetime.now(tz=timezone) # current date and time
 
     date_str = now.strftime(config.date_format)
 
     # date_str = pd.Timestamp.now().strftime(config.date_format)
-    
+
     if not os.path.exists(filename):
-        return 
+        return 'NaT'
 
     tt = time.time()
     print("Loading from disk and extending with new columns..", end="")
@@ -42,8 +44,11 @@ def update_existing_file(filename: str,
     reader = csv.DictReader(open(filename))
     columns = reader.fieldnames
     # update file if new columns or new order
-    changed_columns = set(fieldnames) != set(columns)
-    if changed_columns:
+
+    # header is only updated if more fieldnames are not all in existing columns
+    update_header = not set(fieldnames).issubset(set(columns))
+
+    if update_header:
         #
         shutil.move(filename, filename + '_previous_data')
         reader = csv.DictReader(open(filename + '_previous_data'))
@@ -52,43 +57,54 @@ def update_existing_file(filename: str,
             writer.writeheader()
             for row in reader:
                 writer.writerow(row)
-        
-        # df.reindex(columns=fieldnames[1:]).to_csv(filename)
+
+
     print(f".done in {time.time() - tt:2.2f}s")
-    
+
     return date_str
 
 def retrieve_data(bus, variables_to_log, debug):
-    
-    data = list()
+
+    data = dict()
     for var_name, var_conf in variables_to_log.items():
-        
+
         if debug:
             print(f'Getting {var_conf["address"]} from { var_conf["dbus_device"]}')
         var_value = bus.get(
-            var_conf["dbus_device"], 
+            var_conf["dbus_device"],
             var_conf["address"]
             ).GetValue()
-        
+
         try:
-            var_value = round(var_value,config.round_digits)
-            data.append((var_name, var_value))
-        except:
+            if var_name not in config.non_numeric_var:
+                var_value = round(var_value,config.round_digits)
+            data[var_name] = var_value
+        except Exception:
             print(f'Failed to read  {var_conf["address"]} from { var_conf["dbus_device"]}')
     return data
 
 
+
 def update_loop(debug=False):
     
-    
-    if parallel_SOC:
-        import SOC_estimator as soc
-        
-        soc_model = soc.SOC_estimator(soc.config_V1)
-        measure = soc.Measurement(**soc.measurement_config)
+    if os.environ.get("VICTRON_TEST_SESSION_BUS"):
+        from pydbus import SessionBus
+        bus = SessionBus()
     else:
-        soc_model, measure = None, None
+        bus = SystemBus()
+
+    psystem = power_system.init_power_system(system_components = config.system_components,
+                                             measurement_components=config.measurement_components
+                                             )
+
+    variables_to_log, missing_components = psystem.get_variables_to_log(bus)
+
+    if simulate_system:
+        import simulation
+
+        simulator = simulation.System_Simulation(config.batt_config_V1)
         
+<<<<<<< HEAD
     # get variable_names from config
     fieldnames = (
         ["time"] + list(config.variables_to_log.keys())
@@ -103,30 +119,39 @@ def update_loop(debug=False):
     
     if not os.path.exists(filename):
         write_header = True
+=======
+>>>>>>> logger_update
     else:
-        write_header= False
+        simulator = None
+
+
+
+    t_now = datetime.now(tz=timezone)
     
-    bus = SystemBus()
+    meas_logger = File_Logger("data/log_{date_str}.csv",
+                                    config)
+    sim_logger = File_Logger("data/sim_{date_str}.csv",
+                                    config)
     
-    # wait until next full interval before first sync
-    if not debug:
-        time.sleep(config.log_interval - (now % timedelta(config.log_interval).total_seconds()))
+    
+    
 
     while True:
-        now = datetime.now(tz=timezone) # current date and time
 
-        now_str = now.strftime("%H:%M:%S")
-        date_str =  now.strftime("%y-%m-%d",)
-        filename = f"data/log_{date_str}.csv"
+        t_now = datetime.now(tz=timezone) # current date and time
+        #now_str = t_now.strftime("%H:%M:%S")
+
         try:
-            data = retrieve_data(bus, config.variables_to_log, debug)
+            data = retrieve_data(bus, variables_to_log, debug)
+            
         except Exception as E:
             data = None
             if debug:
                 print(f"Exception {E} was raised.")
                 print("Skipping this update loop")
-        
+
         if data is not None:
+<<<<<<< HEAD
             with open(filename, mode="a") as f:
                 writer = DictWriter(f, fieldnames)
                 
@@ -173,13 +198,36 @@ def update_loop(debug=False):
         t_calc =  datetime.now(tz=timezone) - now
         #t_calc = time.time() - now
         time.sleep(config.log_interval - t_calc.total_seconds())
+=======
+            
+            row_data = meas_logger.log_step(t_now, data)
+            
+            if  simulate_system:
+                sim_row = simulator.update(raw_data=row_data,
+                                           t_now = t_now,
+                                           psystem=psystem)
+                
+                for key, var_value in sim_row.items():
+                    
+                    if key == 'time':
+                        continue
+                    sim_row[key] = round(var_value, config.round_digits)
+                
+                sim_logger.log_step(t_now, sim_row)
+        
+        print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
+  
+        t_calc =  datetime.now(tz=timezone) - t_now
+>>>>>>> logger_update
 
 
+        time.sleep(max(0, config.log_interval - t_calc.total_seconds()))
+        
 
 def main(debug=False):
     os.makedirs("data", exist_ok=True)
     update_loop(debug=debug)
-    
-    
+
+
 if __name__ == '__main__':
-    main(debug=True)
+    main(debug=False)

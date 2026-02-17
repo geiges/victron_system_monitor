@@ -1,11 +1,10 @@
 import math as m
-from utils import Polynomial
 import numpy as np
 
 
 class Battery:
     # capacity in Ah
-    def __init__(self, total_capacity, R0, R1, C1, cells=1, 
+    def __init__(self, total_capacity, R0, R1, C1, cells=1,
                  charge_efficiency=1.0,
                  const_consumption=0.0 # in W
                  ):
@@ -17,48 +16,51 @@ class Battery:
         self.R0 = R0
         self.R1 = R1
         self.C1 = C1
-     
+
         self._current = 0 #  discarge is negative
         self._RC_voltage = 0
-        
+
         self.charge_efficiency = charge_efficiency
 
-        # polynomial representation of OCV vs SoCself._rep__
-        #self._OCV_model = Polynomial([3.1400, 3.9905, -14.2391, 24.4140, -13.5688, -4.0621, 4.5056])
-        
+
         single_cell_voltages = [2.5, 2.90, 3.0, 3.1, 3.2, 3.25, 3.3, 3.35, 3.4, 3.45, 3.65]
         single_cell_voltages = [2.5, 3.0, 3.19, 3.22, 3.25, 3.26, 3.27, 3.3, 3.32, 3.35, 3.5]
         self._rep_V = [x*cells for x in single_cell_voltages]
-        
-        
+
+
         self._rep_SOC = np.linspace(0,1,11)
 
         degree = 5
         coeffs = np.polyfit(self._rep_SOC, self._rep_V, degree) # Returns [a, b, c, d]
         self._OCV_model = np.poly1d(coeffs)
         self._OCV_model.deriv = self._OCV_model.deriv()
-        
+
     def plot_SOCV_relation(self):
         import matplotlib.pyplot as plt
         plt.figure('battery soc to V')
         plt.clf()
         plt.scatter(self._rep_SOC, self._rep_V, marker='x')
         plt.plot(self._rep_SOC, [self._OCV_model(x) for x in self._rep_SOC], )
-        
-    
-        
+
+
+
     def update(self, time_delta, current):
-        self._current = current 
+        self._current = current
         self.actual_capacity -= (self.current * time_delta) * self.charge_efficiency
+        
+        if self.state_of_charge > 1.0:
+            print('Warning, SOC exceed 100%, correcting down to 100%')
+            self.set_state_of_charge(1.0)
+            
         exp_coeff = m.exp(-time_delta/(self.R1*self.C1))
         self._RC_voltage *= exp_coeff
         self._RC_voltage += self.R1*(1-exp_coeff)*self.current
-    
+
     @property
     def current(self):
         return self._current
-    
-    
+
+
 
     # @current.setter
     # def current(self, current):
@@ -71,7 +73,7 @@ class Battery:
 
     def set_state_of_charge(self, SOC):
         self.actual_capacity = self.total_capacity * SOC
-        
+
     @property
     def state_of_charge(self):
         return self.actual_capacity/self.total_capacity
@@ -95,13 +97,13 @@ if __name__ == '__main__':
     current = capacity*discharge_rate
     my_battery = Battery(capacity, 0.062, 0.01, 3000)
     my_battery.current = current
-    
+
     time = [0]
     SoC = [my_battery.state_of_charge]
     OCV = [my_battery.OCV]
     RC_voltage = [my_battery._RC_voltage]
     voltage = [my_battery.voltage]
-    
+
     while my_battery.voltage>cut_off_voltage:
         my_battery.update(time_step)
         time.append(time[-1]+time_step)
@@ -117,7 +119,7 @@ if __name__ == '__main__':
     ax1 = fig.add_subplot(111)
 
     # title, labels
-    ax1.set_title('')    
+    ax1.set_title('')
     ax1.set_xlabel('SoC')
     ax1.set_ylabel('Voltage')
 
@@ -127,24 +129,16 @@ if __name__ == '__main__':
     plt.show()
     plt.legend()
     #%%
-    # OCV_model =  Polynomial([3.1400, 3.9905, -14.2391, 24.4140, -13.5688, -4.0621, 4.5056])
-    # OCV_model =  Polynomial([3.3, 2.61, -9.36, 19.7, -19.0, 6.9])
-    # # 66.235, -242.73\(a_{2}\): 364.5\(a_{3}\): -291\(a_{4}\): 134.7\(a_{5}\): -37.016\(a_{6}\): 6.4617\(a_{7}\): 2.9007 
-    # x = np.linspace(0,1,5)
-    # y = OCV_model(x)
-    # plt.plot(x,y)
-    
+
+
     # LFP values V over SOC
     V = [2.5, 3.0, 3.2, 3.22, 3.25, 3.26, 3.27, 3.3, 3.32, 3.35, 3.4]
-    
+
     SOC = np.linspace(0,1,11)
 
     degree = 5
     coeffs = np.polyfit(SOC, V, degree) # Returns [a, b, c, d]
     np_OCV_model = np.poly1d(coeffs)
-    OCV_model =  Polynomial(coeffs)
     x = np.linspace(0,1,11)
-    y = OCV_model(x)
-    # plt.plot(x,y, 'x')
     plt.plot(SOC, V)
     plt.plot(x, np_OCV_model(x),'x')

@@ -8,23 +8,107 @@ Created on Fri Jan  2 17:53:44 2026
 import os
 import time
 import shutil
-# import pandas as pd
+import pathlib
 import csv
-import config_default as config
-
-from csv import DictWriter
-from pydbus import SystemBus
-from utils import File_Logger
-
-from datetime import datetime, timedelta
 import pytz
+from csv import DictWriter, DictReader
+from pydbus import SystemBus
+from utils import File_Logger, str2datetime, datetime2str
+from datetime import datetime, timedelta
 
+import config_default as config
 import power_system
 
 timezone = pytz.timezone(config.tz)
 
 simulate_system = config.simulate_system
 
+class Logger_Daily_aggregates():
+    
+    def __init__(self, config):
+        
+        self.cfg = config
+        
+        self.cfg = dict(
+            fieldnames = ['date', 'solar_yield'],
+            output_dir = 'data/daily/',
+            input_dir  = 'data')
+        
+        self.cfg["out_filepath"] = os.path.join(
+            self.cfg["output_dir"], 'log_daily.csv')
+        
+        if not os.path.exists(self.cfg["out_filepath"]):
+            self._init_output_file()
+            
+        self.last_date_str = self._get_last_date_logged()
+        
+        os.makedirs(self.cfg['output_dir'],exist_ok=True)
+        
+    def _get_last_date_logged(self):
+        
+        if not os.path.exists(self.cfg["out_filepath"]):
+            return "NaT"
+        
+        with open(self.cfg["out_filepath"], mode="r") as fid:
+            	data = fid.readlines() 
+        lastRow = data[-1]
+        
+        last_date_str =  lastRow.split(',')[0]
+        return last_date_str
+    
+    def _compute_day_yield(self, file):
+        path = pathlib.Path(file)
+        date_str = path.name.replace('log_','').replace('.csv','')
+        with open(os.path.join(self.cfg['input_dir'], file), mode="r") as fid:
+            reader = DictReader(fid)
+            first = next(reader)
+            
+            for row in reader:
+                pass
+            last = row
+            
+            data = dict(
+                date = date_str,
+                solar_yield = round(
+                    float(last['mppt150/total_yield']) - float(first['mppt150/total_yield']),
+                    config.round_digits
+                    )
+                )
+            print(f"{first['mppt150/power_yield']} - {last['mppt150/power_yield']} = {data['solar_yield']}")
+        return data
+        
+    
+    def _init_output_file(self):
+        files = sorted(x for x in os.listdir(self.cfg["input_dir"]) 
+                       if (x.startswith('log') and (x.endswith('.csv')))
+                       )
+        
+        with open(self.cfg["out_filepath"], mode="w") as fid_out:
+            writer = DictWriter(fid_out, self.cfg["fieldnames"])
+            writer.writeheader()
+            for file in files:
+                data = self._compute_day_yield(file)
+                writer.writerow(data)
+                
+                
+        
+    def update_daily_aggregates(self, date_str):
+        
+        if self.last_date_str != date_str:
+            
+            time_delta = str2datetime(date_str) - str2datetime(self.last_date_str)
+            base = str2datetime(self.last_date_str)
+            date_list = [base + timedelta(days=x) for x in range(1, time_delta.days)]
+            
+            with open(self.cfg["out_filepath"], mode="a") as fid_out:
+                writer = DictWriter(fid_out, self.cfg["fieldnames"])
+                for date in date_list:
+                    filepath  = "log_{date_str}.csv".format(date_str=datetime2str(date))
+                    data = self._compute_day_yield(filepath)
+                    writer.writerow(data)
+                pass
+        
+        
 
 def update_existing_file(filename: str,
                          fieldnames: list[str],) -> str:
@@ -117,13 +201,14 @@ def update_loop(debug=False):
     sim_logger = File_Logger("data/sim_{date_str}.csv",
                                     config)
     
+    daily_logger =Logger_Daily_aggregates(config)
     
     
 
     while True:
 
         t_now = datetime.now(tz=timezone) # current date and time
-        #now_str = t_now.strftime("%H:%M:%S")
+        date_str =  t_now.strftime(config.date_format)
 
         try:
             data = retrieve_data(bus, variables_to_log, debug)
@@ -135,7 +220,8 @@ def update_loop(debug=False):
                 print("Skipping this update loop")
 
         if data is not None:
-
+            date_str =  t_now.strftime(config.date_format)
+            daily_logger.update_daily_aggregates(date_str)
             
             row_data = meas_logger.log_step(t_now, data)
             
@@ -167,4 +253,10 @@ def main(debug=False):
 
 
 if __name__ == '__main__':
-    main(debug=False)
+    # main(debug=False)
+    daily_logger =Logger_Daily_aggregates(config)
+
+    now = datetime.now(tz=timezone) # current date and time
+    date_str = now.strftime(config.date_format)
+
+    daily_logger.update_daily_aggregates(date_str)

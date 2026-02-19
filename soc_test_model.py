@@ -55,6 +55,7 @@ dates = [
 
 df = list()
 subprocess.run(["rsync", "-av", "root@192.168.1.5:/data/python/victron_system_monitor/data", "." ])
+
 # subprocess.run(['sh', "rsync.sh"])
 for date in dates:
     filename = f"log_{date}.csv"

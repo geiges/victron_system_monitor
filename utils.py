@@ -5,8 +5,16 @@ import csv
 import shutil
 import pytz
 from csv import DictWriter
+import config_default as config
 
 #%%
+
+def datetime2str(date:datetime):
+    return date.strftime(config.date_format)
+
+def str2datetime(date_str):
+    return datetime.strptime(date_str, config.date_format)
+    
 
 class File_Logger():
     
@@ -63,9 +71,6 @@ class File_Logger():
             with open(file_filepath, mode="a") as f:
                 writer = DictWriter(f, fieldnames)
                 writer.writeheader()
-                # for row in reader:
-                #     writer.writerow(row)
-    
     
         print(f".done in {time.time() - tt:2.2f}s")
     
@@ -99,11 +104,14 @@ class File_Logger():
             
             self.update_existing_file(t_now, data)
             
+        if 'time' not in data.keys():
             
-        now_str = t_now.strftime("%H:%M:%S")
-        row_data = dict(time=now_str)
-        row_data.update(data)
-        
+            now_str = t_now.strftime("%H:%M:%S")
+            row_data = dict(time=now_str)
+            row_data.update(data)
+        else:
+            row_data = data
+            
         filepath = self._get_output_file_path(t_now)
         #flag if data dict is different from old 
         data_changed = (data != self.old_data)

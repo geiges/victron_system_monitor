@@ -79,7 +79,7 @@ class System_Simulation():
         best_idx = np.argmin(errors)
         return float(soc_values[best_idx])
 
-    def set_state(self, SOC, RC_voltage= 0):
+    def set_state(self, SOC, t_now, RC_voltage= 0):
         print(f'Setting state to SOC={SOC} and RC_voltage={RC_voltage}')
         self.battery_simulation.actual_capacity =  SOC* self.battery_simulation.total_capacity
 
@@ -91,6 +91,7 @@ class System_Simulation():
                           self.battery_simulation)
 
         self.Kf.set_state(SOC, RC_voltage)
+        self.t_previous = t_now
 
 
     def update(self,
@@ -155,10 +156,10 @@ class System_Simulation():
             if abs(current) < 2.0:
                 initial_soc = self.estimate_initial_SOC(voltage)
                 print(f'Estimated initial SOC from OCV={voltage:.2f}V: {initial_soc:.2%}')
-                self.set_state(initial_soc, RC_voltage=0.)
+                self.set_state(initial_soc, time=t_now, RC_voltage=0.)
             else:
                 print(f'Current too high ({current:.1f}A) for OCV-based init, using default SOC=0.5')
-                self.set_state(self.default_init_SOC, self.default_init_RV)
+                self.set_state(self.default_init_SOC, t_now, self.default_init_RV)
                     
             self.initilized = True
             OCV_est = sim_data[battery_voltage_var] - self.R0 * sim_data[battery_current_var]
@@ -167,6 +168,8 @@ class System_Simulation():
             
             # simulate SOC
             time_delta = (t_now - self.t_previous).total_seconds()
+            
+            print(time_delta)
             
             if time_delta is not None:
                 self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
@@ -191,7 +194,7 @@ class System_Simulation():
             if (self.Kf.x[0,0] < 0.0) and  (abs(sim_data[battery_current_var]) < 5.):
                 self.battery_simulation.set_state_of_charge(SOC=0.0)
     
-        self.t_previous = t_now
+            self.t_previous = t_now
         estimated_SOC = float(self.Kf.x[0,0])
         SOC_counted = self.battery_simulation.state_of_charge
         sim_data['OCV_est'] = OCV_est

@@ -43,6 +43,8 @@ class File_Logger():
             fieldnames = (
                 ["time"] + list(data.keys())
                 )
+        else:
+            fieldnames = list(data.keys())
         
         self.fieldnames = fieldnames
     

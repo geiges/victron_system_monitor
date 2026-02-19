@@ -207,12 +207,25 @@ def update_loop(debug=False):
         
         curr_output_file = sim_logger.get_output_file_path(t_now)
         if os.path.exists(curr_output_file):
-            reader = csv.DictReader(curr_output_file)
-            
-            for row in reader:
-                soc = row['SOC_counted']
+            with open(curr_output_file, 'r') as fid:
+                reader = csv.DictReader(fid)
                 
-        simulator.set_state(soc)
+                for row in reader:
+                    #print(row)
+                    soc = row['SOC_counted']
+                    t_previous = row['time']
+                    
+        
+        
+        t_prev = datetime.strptime(t_previous, config.time_format)
+        
+        t_previous = datetime(year = t_now.year, month = t_now.month, day = t_now.day,
+                              hour = t_prev.hour, minute = t_prev.minute, second=t_prev.second)
+        
+        localtz = pytz.timezone(config.tz)
+        t_previous = localtz.localize(t_previous)
+
+        simulator.set_state(float(soc), t_previous )
         simulator.initilized = True
 
     else:

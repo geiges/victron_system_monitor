@@ -35,7 +35,7 @@ class Logger_Daily_aggregates():
             input_dir  = 'data')
         
         self.cfg["out_filepath"] = os.path.join(
-            self.cfg["output_dir"], 'log_daily.csv')
+            self.cfg["output_dir"], 'solar_daily.csv')
         
         if not os.path.exists(self.cfg["out_filepath"]):
             self._init_output_file()

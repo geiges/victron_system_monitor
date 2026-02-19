@@ -59,7 +59,9 @@ class Logger_Daily_aggregates():
     def _compute_day_yield(self, file):
         path = pathlib.Path(file)
         date_str = path.name.replace('log_','').replace('.csv','')
-        with open(os.path.join(self.cfg['input_dir'], file), mode="r") as fid:
+        filepath = os.path.join(self.cfg['input_dir'], file)
+        assert os.path.exists(filepath)
+        with open(filepath, mode="r") as fid:
             reader = DictReader(fid)
             first = next(reader)
             
@@ -184,14 +186,7 @@ def update_loop(debug=False):
 
     variables_to_log, missing_components = psystem.get_variables_to_log(bus)
 
-    if simulate_system:
-        import simulation
-
-        simulator = simulation.System_Simulation(config.batt_config_V1)
-        
-
-    else:
-        simulator = None
+   
 
 
 
@@ -205,6 +200,23 @@ def update_loop(debug=False):
     daily_logger =Logger_Daily_aggregates(config)
     
     
+    if simulate_system:
+        import simulation
+
+        simulator = simulation.System_Simulation(config.batt_config_V1)
+        
+        curr_output_file = sim_logger.get_output_file_path(t_now)
+        if os.path.exists(curr_output_file):
+            reader = csv.DictReader(curr_output_file)
+            
+            for row in reader:
+                soc = row['SOC_counted']
+                
+        simulator.set_state(soc)
+        simulator.initilized = True
+
+    else:
+        simulator = None
 
     while True:
 
@@ -254,10 +266,10 @@ def main(debug=False):
 
 
 if __name__ == '__main__':
-    # main(debug=False)
-    daily_logger =Logger_Daily_aggregates(config)
+    main(debug=False)
+    # daily_logger =Logger_Daily_aggregates(config)
 
-    now = datetime.now(tz=timezone) # current date and time
-    date_str = now.strftime(config.date_format)
+    # now = datetime.now(tz=timezone) # current date and time
+    # date_str = now.strftime(config.date_format)
 
-    daily_logger.update_daily_aggregates(date_str)
+    # daily_logger.update_daily_aggregates(date_str)

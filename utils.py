@@ -29,7 +29,7 @@ class File_Logger():
 
         self.initialized = False
 
-    def _get_output_file_path(self, t_now):
+    def get_output_file_path(self, t_now):
         date_str =  t_now.strftime(self.config.date_format)
         log_filepath = self.file_path_structure.format(date_str=date_str)
         
@@ -39,14 +39,15 @@ class File_Logger():
                              t_now,
                              data):
         
-        fieldnames = (
-            ["time"] + list(data.keys())
-            )
+        if 'time' not in data.keys():
+            fieldnames = (
+                ["time"] + list(data.keys())
+                )
         
         self.fieldnames = fieldnames
     
         # now = datetime.now(tz=timezone) # current date and time
-        file_filepath = self._get_output_file_path(t_now)
+        file_filepath = self.get_output_file_path(t_now)
         date_str = t_now.strftime(self.config.date_format)
     
         # date_str = pd.Timestamp.now().strftime(config.date_format)
@@ -112,7 +113,7 @@ class File_Logger():
         else:
             row_data = data
             
-        filepath = self._get_output_file_path(t_now)
+        filepath = self.get_output_file_path(t_now)
         #flag if data dict is different from old 
         data_changed = (data != self.old_data)
         

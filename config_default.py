@@ -28,7 +28,10 @@ system_components = [
                                    const_consumption=0.2),
     components.VictronMultiplusII('MultiPlus-II 24/3000/70-32',
                                   short_name='multiplus',
-                                  const_consumption=0.1)
+                                  const_consumption=0.1),
+    components.VictronPhoenix24_800('Phoenix Inverter 24V 800VA 230V', 
+                                    short_name='phoenix',
+                                    const_consumption=0.1)
     ]
 
 # system connectors (relevant for measurements)

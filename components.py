@@ -173,6 +173,27 @@ class VictronMultiplusII(BaseComponent):
         super().__init__(product_name, short_name, component_type, const_consumption) 
         self.connector_R0 = None
         
+          
+        
+class VictronPhoenix24_800(BaseComponent):
+    """
+    Victron solar charger component
+    """
+    component_variables =[
+        VariableType(basename = "AC_power_output", subaddress = "/Ac/Out/P", unit='W'),
+        VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
+        VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
+        VariableType(basename = "alarm_high_temperature", subaddress="/Alarms/HighTemperature", unit=''),
+        VariableType(basename = "alarm_low_battery", subaddress="/Alarms/LowBattery", unit=''),
+        VariableType(basename = "alarm_overload", subaddress="/Alarms/Overload", unit='')
+        ]
+    
+    def __init__(self, product_name, short_name, const_consumption=0.0):
+
+        component_type ='com.victronenergy.inverter'
+        super().__init__(product_name, short_name, component_type, const_consumption) 
+        self.connector_R0 = None
+        
 
 class VictronBatteryMonitor(BaseComponent):
     pass # not implemented
@@ -184,4 +205,5 @@ if __name__ == "__main__":
     #testing
     mppt = VictronSolarCharger('SmartSolar Charger MPPT 150/35', short_name='mppt150')
     inverter = VictronMultiplusII('MultiPlus-II 24/3000/70-32', short_name='multiplus')
+    inverter2 = VictronPhoenix24_800('Phoenix Inverter 24V 800VA 230V', short_name='phoenix')
     system = VictronSystem('-', short_name='system')

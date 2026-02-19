@@ -65,6 +65,7 @@ class Logger_Daily_aggregates():
             
             for row in reader:
                 pass
+            print(row)
             last = row
             
             data = dict(

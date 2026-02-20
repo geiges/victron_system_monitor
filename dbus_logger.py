@@ -246,8 +246,8 @@ def update_loop(debug=False):
                 print("Skipping this update loop")
 
         if data is not None:
-            date_str =  t_now.strftime(config.date_format)
-            daily_logger.update_daily_aggregates(date_str)
+            #date_str =  t_now.strftime(config.date_format)
+            #daily_logger.update_daily_aggregates(date_str)
             
             row_data = meas_logger.log_step(t_now, data)
             

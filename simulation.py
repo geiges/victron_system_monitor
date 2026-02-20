@@ -156,7 +156,7 @@ class System_Simulation():
             if abs(current) < 2.0:
                 initial_soc = self.estimate_initial_SOC(voltage)
                 print(f'Estimated initial SOC from OCV={voltage:.2f}V: {initial_soc:.2%}')
-                self.set_state(initial_soc, time=t_now, RC_voltage=0.)
+                self.set_state(initial_soc, t_now=t_now, RC_voltage=0.)
             else:
                 print(f'Current too high ({current:.1f}A) for OCV-based init, using default SOC=0.5')
                 self.set_state(self.default_init_SOC, t_now, self.default_init_RV)

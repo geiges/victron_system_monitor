@@ -206,7 +206,7 @@ def update_loop(debug=False):
         simulator = simulation.System_Simulation(config.batt_config_V1)
         
         curr_output_file = sim_logger.get_output_file_path(t_now)
-        if os.path.exists(curr_output_file):
+        if False: #os.path.exists(curr_output_file):
             with open(curr_output_file, 'r') as fid:
                 reader = csv.DictReader(fid)
                 
@@ -217,16 +217,16 @@ def update_loop(debug=False):
                     
         
         
-        t_prev = datetime.strptime(t_previous, config.time_format)
-        
-        t_previous = datetime(year = t_now.year, month = t_now.month, day = t_now.day,
-                              hour = t_prev.hour, minute = t_prev.minute, second=t_prev.second)
-        
-        localtz = pytz.timezone(config.tz)
-        t_previous = localtz.localize(t_previous)
-
-        simulator.set_state(float(soc), t_previous )
-        simulator.initilized = True
+            t_prev = datetime.strptime(t_previous, config.time_format)
+            
+            t_previous = datetime(year = t_now.year, month = t_now.month, day = t_now.day,
+                                  hour = t_prev.hour, minute = t_prev.minute, second=t_prev.second)
+            
+            localtz = pytz.timezone(config.tz)
+            t_previous = localtz.localize(t_previous)
+    
+            simulator.set_state(float(soc), t_previous )
+            simulator.initilized = True
 
     else:
         simulator = None

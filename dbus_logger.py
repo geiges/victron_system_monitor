@@ -41,6 +41,7 @@ class Logger_Daily_aggregates():
             self._init_output_file()
             
         self.last_date_str = self._get_last_date_logged()
+        print(self.last_date_str)
         
         os.makedirs(self.cfg['output_dir'],exist_ok=True)
         
@@ -52,6 +53,7 @@ class Logger_Daily_aggregates():
         with open(self.cfg["out_filepath"], mode="r") as fid:
             	data = fid.readlines() 
         lastRow = data[-1]
+        
         
         last_date_str =  lastRow.split(',')[0]
         return last_date_str
@@ -102,6 +104,7 @@ class Logger_Daily_aggregates():
             time_delta = str2datetime(date_str) - str2datetime(self.last_date_str)
             base = str2datetime(self.last_date_str)
             date_list = [base + timedelta(days=x) for x in range(1, time_delta.days)]
+            print(date_list)
             
             with open(self.cfg["out_filepath"], mode="a") as fid_out:
                 writer = DictWriter(fid_out, self.cfg["fieldnames"])
@@ -110,7 +113,9 @@ class Logger_Daily_aggregates():
                     data = self._compute_day_yield(filepath)
                     writer.writerow(data)
                 pass
-        
+            
+            self.last_date_str = date_str
+            print("finished aggregate update")
         
 
 def update_existing_file(filename: str,

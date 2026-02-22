@@ -267,7 +267,7 @@ def update_loop(debug=False):
             
             row_data = meas_logger.log_step(t_now, data)
             
-            if simulate_system and row_data is not None:
+            if simulate_system and (row_data is not None):
                 sim_row = simulator.update(raw_data=row_data,
                                            t_now = t_now,
                                            psystem=psystem)

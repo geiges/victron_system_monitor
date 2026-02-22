@@ -206,12 +206,12 @@ def update_loop(debug=False):
         simulator = simulation.System_Simulation(config.batt_config_V1)
         
         curr_output_file = sim_logger.get_output_file_path(t_now)
-        if False: #os.path.exists(curr_output_file):
+        if os.path.exists(curr_output_file):
             with open(curr_output_file, 'r') as fid:
                 reader = csv.DictReader(fid)
                 
                 for row in reader:
-                    #print(row)
+                    print(row)
                     soc = row['SOC_counted']
                     t_previous = row['time']
                     
@@ -246,8 +246,8 @@ def update_loop(debug=False):
                 print("Skipping this update loop")
 
         if data is not None:
-            #date_str =  t_now.strftime(config.date_format)
-            #daily_logger.update_daily_aggregates(date_str)
+            date_str =  t_now.strftime(config.date_format)
+            daily_logger.update_daily_aggregates(date_str)
             
             row_data = meas_logger.log_step(t_now, data)
             

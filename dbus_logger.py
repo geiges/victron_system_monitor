@@ -209,7 +209,7 @@ def update_loop(debug=False):
     
     now = datetime.now(tz=timezone) # current date and time
 
-    state['running_since'] = now.strftime(config.date_format)
+    state['running_since'] = now.strftime("%y-%m-%d H:%M:")
 
     with open('data/state.json', 'w') as fp:
         json.dump(state, fp)

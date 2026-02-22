@@ -11,6 +11,7 @@ import shutil
 import pathlib
 import csv
 import pytz
+import json
 from csv import DictWriter, DictReader
 from pydbus import SystemBus
 from utils import File_Logger, str2datetime, datetime2str
@@ -44,6 +45,8 @@ class Logger_Daily_aggregates():
         print(self.last_date_str)
         
         os.makedirs(self.cfg['output_dir'],exist_ok=True)
+        
+        
         
     def _get_last_date_logged(self):
         
@@ -202,6 +205,14 @@ def update_loop(debug=False):
     sim_logger = File_Logger("data/sim_{date_str}.csv",
                                     config)
     
+    state = dict()
+    
+    now = datetime.now(tz=timezone) # current date and time
+
+    state['running_since'] = now.strftime(config.date_format)
+
+    with open('data/state.json', 'w') as fp:
+        json.dump(state, fp)
     daily_logger =Logger_Daily_aggregates(config)
     
     
@@ -272,8 +283,6 @@ def update_loop(debug=False):
         print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
   
         t_calc =  datetime.now(tz=timezone) - t_now
-
-
 
         time.sleep(max(0, config.log_interval - t_calc.total_seconds()))
         

@@ -139,7 +139,7 @@ class File_Logger():
             self.cached_data = dict(filename=filepath, 
                                 row_data = row_data.copy(),
                                 is_new_day = is_new_day)
-            
+            row_data = None
             
         self.filepath = filepath
         self.old_data = data

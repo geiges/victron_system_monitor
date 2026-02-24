@@ -266,12 +266,13 @@ def update_loop(debug=False):
             
             row_data = meas_logger.log_step(t_now, data)
             
-            state.update(row_data)
+            
             
             if simulate_system and (row_data is not None):
                 sim_row = simulator.update(raw_data=row_data,
                                            t_now = t_now,
                                            psystem=psystem)
+                state.update(row_data)
                 state.update(sim_row)
                 
                 state['time_to_low_battery'] = simulator.time_to_low_battery()

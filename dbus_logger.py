@@ -115,7 +115,7 @@ class Logger_Daily_aggregates():
                     filepath  = "log_{date_str}.csv".format(date_str=datetime2str(date))
                     data = self._compute_day_yield(filepath)
                     writer.writerow(data)
-                pass
+                
             
             self.last_date_str = date_str
             print("finished aggregate update")
@@ -211,8 +211,7 @@ def update_loop(debug=False):
 
     state['running_since'] = now.strftime("%y-%m-%d %H:%M")
 
-    with open('data/state.json', 'w') as fp:
-        json.dump(state, fp)
+    
     daily_logger =Logger_Daily_aggregates(config)
     
     
@@ -267,10 +266,15 @@ def update_loop(debug=False):
             
             row_data = meas_logger.log_step(t_now, data)
             
+            state.update(row_data)
+            
             if simulate_system and (row_data is not None):
                 sim_row = simulator.update(raw_data=row_data,
                                            t_now = t_now,
                                            psystem=psystem)
+                state.update(sim_row)
+                
+                state['time_to_low_battery'] = simulator.time_to_low_battery()
                 
                 for key, var_value in sim_row.items():
                     
@@ -281,7 +285,9 @@ def update_loop(debug=False):
                 sim_logger.log_step(t_now, sim_row)
         
         print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
-  
+        
+        with open('data/state.json', 'w') as fp:
+            json.dump(state, fp)
         t_calc =  datetime.now(tz=timezone) - t_now
 
         time.sleep(max(0, config.log_interval - t_calc.total_seconds()))

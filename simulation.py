@@ -52,6 +52,7 @@ class System_Simulation():
         self.C1 = sim_config['C1']
         self.ncells = sim_config['ncells']
         self.Q_tot = sim_config['Q_tot'] # in Ah
+        self.low_battery_SOC = sim_config["low_battery_SOC"]
 
         #system_properties
         self.charge_efficiency = sim_config['charge_efficiency']
@@ -94,6 +95,40 @@ class System_Simulation():
         self.t_previous = t_now
 
 
+    def time_to_low_battery(self):
+        """
+        
+
+        Parameters
+        ----------
+        current : TYPE
+            DESCRIPTION.
+        to_SOC : TYPE, optional
+            DESCRIPTION. The default is .0.
+
+        Returns
+        -------
+        time_to_empty : TYPE
+            DESCRIPTION.
+
+        """
+        
+        current = self.battery_simulation.current
+        SOC = self.battery_simulation.state_of_charge
+        if current >= 0 or (self.low_battery_SOC < SOC):
+            return None
+        else:   
+            full_amphours =  self.battery_simulation.total_capacity
+            
+            amphours_left = (
+                 SOC* full_amphours - self.low_battery_SOC * full_amphours
+                 )
+            time_to_empty = amphours_left / -current # in s
+            return time_to_empty
+        
+        
+
+        
     def update(self,
                raw_data,
                t_now,

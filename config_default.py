@@ -55,7 +55,8 @@ batt_config_V1 = {
     "Q_soc" : 1e-6,     # process noise for SOC state
     "Q_rc"  : 1e-6,     # process noise for RC voltage state
     "charge_efficiency" : 1.0,
-    "version" : 'V1'
+    "version" : 'V1',
+    "low_battery_SOC" : 0.2
 }
 
 try:

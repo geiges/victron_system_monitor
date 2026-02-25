@@ -97,25 +97,19 @@ class System_Simulation():
 
     def time_to_low_battery(self):
         """
-        
-
-        Parameters
-        ----------
-        current : TYPE
-            DESCRIPTION.
-        to_SOC : TYPE, optional
-            DESCRIPTION. The default is .0.
+        Linear extrapolation of the remaining time to the low battery state
+        assuming the discarge current remains the same.
 
         Returns
         -------
-        time_to_empty : TYPE
-            DESCRIPTION.
+        time_to_empty : float
+            Remaining time in seconds
 
         """
         
         current = self.battery_simulation.current
         SOC = self.battery_simulation.state_of_charge
-        if current >= 0 or (self.low_battery_SOC > SOC):
+        if current >= 0.5 or (self.low_battery_SOC > SOC):
             return None
         else:   
             full_amphours =  self.battery_simulation.total_capacity

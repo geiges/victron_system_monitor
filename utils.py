@@ -55,30 +55,36 @@ class File_Logger():
         # date_str = pd.Timestamp.now().strftime(config.date_format)
     
         if not os.path.exists(file_filepath):
-            return 'NaT'
+            self.old_date_str =  None
+            self.fieldnames = fieldnames
+            self.initialized = True
+        else:
     
-        tt = time.time()
-        print("Loading from disk and extending with new columns..", end="")
-        # df = pd.read_csv(filename, index_col=0)
-        reader = csv.DictReader(open(file_filepath))
-        columns = reader.fieldnames
-        # update file if new columns or new order
-    
-        # header is only updated if more fieldnames are not all in existing columns
-        update_header = not set(fieldnames).issubset(set(columns))
-    
-        if update_header:
-            fieldnames = set(fieldnames).union(set(columns))
-            shutil.move(file_filepath, file_filepath + '_previous_data')
-            reader = csv.DictReader(open(file_filepath + '_previous_data'))
-            with open(file_filepath, mode="a") as f:
-                writer = DictWriter(f, fieldnames)
-                writer.writeheader()
-    
-        print(f".done in {time.time() - tt:2.2f}s")
-    
-        self.old_date_str =  date_str
-        self.initialized = True
+            tt = time.time()
+            print("Loading from disk and extending with new columns..", end="")
+            # df = pd.read_csv(filename, index_col=0)
+            reader = csv.DictReader(open(file_filepath))
+            columns = reader.fieldnames
+            # update file if new columns or new order
+        
+            # header is only updated if more fieldnames are not all in existing columns
+            update_header = not set(fieldnames).issubset(set(columns))
+        
+            if update_header:
+                fieldnames = set(fieldnames).union(set(columns))
+                shutil.move(file_filepath, file_filepath + '_previous_data')
+                reader = csv.DictReader(open(file_filepath + '_previous_data'))
+                with open(file_filepath, mode="a") as f:
+                    writer = DictWriter(f, fieldnames)
+                    writer.writeheader()
+                self.fieldnames = fieldnames
+            else:
+                self.fieldnames = columns
+            print(f".done in {time.time() - tt:2.2f}s")
+        
+            self.old_date_str =  date_str
+            self.initialized = True
+            self.fieldnames = fieldnames
         
     
     def _write_headers(self, filename, fieldnames):

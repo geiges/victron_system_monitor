@@ -154,6 +154,23 @@ class VictronSolarCharger(BaseComponent):
         super().__init__(product_name, short_name, component_type, const_consumption) 
         self.connector_R0 = None
         
+class VictronSolarChargerWithDCLoad(BaseComponent):
+    """
+    Victron solar charger component
+    """
+    component_variables =[
+        VariableType(basename = "power_yield", subaddress = "/Yield/Power", unit='W'),
+        VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
+        VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
+        VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
+        ]
+    
+    def __init__(self, product_name, short_name, const_consumption=0.0):
+         
+        component_type = 'com.victronenergy.solarcharger'
+        super().__init__(product_name, short_name, component_type, const_consumption) 
+        self.connector_R0 = None
+        
 class VictronMultiplusII(BaseComponent):
     """
     Victron solar charger component

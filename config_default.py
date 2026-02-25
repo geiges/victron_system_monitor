@@ -25,7 +25,10 @@ system_components = [
     components.VictronSystem(None, short_name='system'),
     components.VictronSolarCharger('SmartSolar Charger MPPT 150/35',
                                    short_name='mppt150',
-                                   const_consumption=0.2),
+                                   const_consumption=0.05),
+    components.VictronSolarChargerWithDCLoad('SmartSolar Charger MPPT 100/20 48V',
+                                   short_name='mppt100',
+                                   const_consumption=0.05),
     components.VictronMultiplusII('MultiPlus-II 24/3000/70-32',
                                   short_name='multiplus',
                                   const_consumption=0.1),
@@ -38,6 +41,9 @@ system_components = [
 measurement_components = {
     "mppt150": {
         'connector_R0' :  0.011,
+        'voltage_offset' :  -0.1},
+    "mppt100": {
+        'connector_R0' :  0.015,
         'voltage_offset' :  -0.1},
     "multiplus": {
         'connector_R0' :  0.0035,

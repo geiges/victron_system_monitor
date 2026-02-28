@@ -194,7 +194,11 @@ def update_loop(debug=False):
 
     variables_to_log, missing_components = psystem.get_variables_to_log(bus)
 
-   
+    "variables that are summed up over all components to system value"
+    state_variables_to_sum = [
+        "power_yield",
+        "total_yield"
+        ]
 
 
 
@@ -277,6 +281,13 @@ def update_loop(debug=False):
                 
                 state['time_to_low_battery'] = simulator.time_to_low_battery()
                 
+                for sum_var in state_variables_to_sum:
+                    
+                    #find all non-system variables ending with sum_var
+                    vars_to_sum = [x for x in row_data.keys if not x.startswith('system') and x.endswith(sum_var)]
+                    sum_value = sum(row_data[x] for x in vars_to_sum)
+                    state[f'system/{sum_var}'] = sum_value
+                    
                 for key, var_value in sim_row.items():
                     
                     if key == 'time':

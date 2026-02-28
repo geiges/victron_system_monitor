@@ -71,7 +71,8 @@ class File_Logger():
             update_header = not set(fieldnames).issubset(set(columns))
         
             if update_header:
-                fieldnames = set(fieldnames).union(set(columns))
+                fieldnames = set(fieldnames).union(set(columns)) - set(['time'])
+                fieldnames = ['time'] + list(fieldnames)
                 shutil.move(file_filepath, file_filepath + '_previous_data')
                 reader = csv.DictReader(open(file_filepath + '_previous_data'))
                 with open(file_filepath, mode="a") as f:

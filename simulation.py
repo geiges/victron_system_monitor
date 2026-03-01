@@ -109,7 +109,7 @@ class System_Simulation():
         
         current = self.battery_simulation.current
         SOC = self.battery_simulation.state_of_charge
-        if current >= 0.5 or (self.low_battery_SOC > SOC):
+        if current >= -0.5 or (self.low_battery_SOC > SOC):
             return None
         else:   
             full_amphours =  self.battery_simulation.total_capacity

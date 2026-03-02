@@ -13,7 +13,7 @@ import power_system
 date_format = "%y-%m-%d"
 time_format = "%H:%M:%S"
 log_interval = 5 # seconds
-round_digits = 3
+round_digits = 4
 tz = 'Europe/Berlin'
 
 non_numeric_var = []

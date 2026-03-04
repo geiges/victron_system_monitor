@@ -143,7 +143,7 @@ class System_Simulation():
 
         non_system_variables = [x for x in raw_data.keys() if  not x.startswith('system')]
 
-        for var in [x for x in non_system_variables if x.endswith('current')]:
+        for var in [x for x in non_system_variables if x.endswith('DC_0_current')]:
             # get compenent name and comp from varible name
             comp = psystem[var.split('/')[0]]
             sim_data[var] = raw_data[var] - comp.const_consumption
@@ -157,7 +157,7 @@ class System_Simulation():
 
         # Simulate voltages
         voltages_to_average = []
-        for var in [x for x in non_system_variables if x.endswith('voltage')]:
+        for var in [x for x in non_system_variables if x.endswith('DC_0_voltage')]:
 
             # get compenent name and comp from varible name
             comp = psystem[var.split('/')[0]]

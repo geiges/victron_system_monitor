@@ -162,6 +162,7 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
         VariableType(basename = "power_yield", subaddress = "/Yield/Power", unit='W'),
         VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
         VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
+        VariableType(basename = "DC_load_current", subaddress = "/Load/I", unit='A'),
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     

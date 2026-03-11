@@ -284,7 +284,7 @@ def update_loop(debug=False):
                 for sum_var in state_variables_to_sum:
                     
                     #find all non-system variables ending with sum_var
-                    vars_to_sum = [x for x in row_data.keys() if not x.startswith('system') and x.endswith(sum_var)]
+                    vars_to_sum = [x for x in row_data.keys() if (not x.startswith('system')) and x.endswith(sum_var)]
                     sum_value = sum(row_data[x] for x in vars_to_sum)
                     state[f'system/{sum_var}'] = sum_value
                     

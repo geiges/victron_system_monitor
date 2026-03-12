@@ -12,6 +12,10 @@ class VariableType(NamedTuple):
     subaddress : str
     unit : str
 
+class StateType(NamedTuple):
+    basename: str
+    subaddress: str 
+    mapping: dict
 
 class BaseComponent(object):
     """
@@ -85,7 +89,24 @@ class BaseComponent(object):
                         'unit' : variable.unit},
                     })
             return variables
-        
+    def get_device_states(self,dbus):
+        """
+        Returns a dictionary of all implemented variables for this device
+        """
+        interface_address = self.get_interface(dbus)
+        variables = {}
+        if interface_address is None:
+            return variables
+        else:
+            for variable in self.component_states:
+                
+                variables.update({
+                    f"{self.short_name}/{variable.basename}": {
+                        "dbus_device" : interface_address,
+                        "address" : variable.subaddress,
+                        'mapping' : variable.mapping},
+                    })
+            return variables        
     def init_measurement_correction(self, connector_R0, voltage_offset):
         """
         Set connector resistance of cable connection and voltage offset in order
@@ -147,6 +168,10 @@ class VictronSolarCharger(BaseComponent):
         VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
+    component_states = [
+        StateType(basename = 'mppt_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        ]
+    
     
     def __init__(self, product_name, short_name, const_consumption=0.0):
          
@@ -164,6 +189,10 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
         VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
         VariableType(basename = "DC_load_current", subaddress = "/Load/I", unit='A'),
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
+        ]
+    component_states = [
+        StateType(basename = 'mppt_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'load_state', subaddress='/Load/State', mapping= {0: "off", 1: "on"})
         ]
     
     def __init__(self, product_name, short_name, const_consumption=0.0):

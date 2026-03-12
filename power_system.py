@@ -44,7 +44,10 @@ class Power_system(dict):
         return self.keys()
     
     def get_variables_to_log(self, dbus):
-        
+        """
+        Return a dictionary with all information of available variabless of the current system components. Second
+        output is a list of components that are registered, but not found currently.
+        """
         variables_to_log = dict()
         missing_components = list()
         
@@ -62,6 +65,28 @@ class Power_system(dict):
             
         return variables_to_log, missing_components
             
+    def get_states_to_log(self, dbus):
+        """
+        Return a dictionary with all information of available states of the current system components. Second
+        output is a list of components that are registered, but not found currently.
+        """
+        
+        states_to_log = dict()
+        missing_components = list()
+        
+        #loop over configures system components
+        for component in self.values():
+            
+            if component.is_avaiable_on_bus(dbus):
+                # component is currently connected
+                states_to_log.update(component.get_device_states(dbus))
+            else:
+                missing_components.append(component)
+                
+        if len(missing_components)> 0:
+            print(f'The following components are unresponsive: {missing_components}')
+            
+        return states_to_log, missing_components
             
 def init_power_system(system_components,
                       measurement_components):

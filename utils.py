@@ -78,14 +78,15 @@ class File_Logger():
                 with open(file_filepath, mode="a") as f:
                     writer = DictWriter(f, fieldnames)
                     writer.writeheader()
+                    for row in reader:
+                        writer.writerow(row)
                 self.fieldnames = fieldnames
             else:
                 self.fieldnames = columns
             print(f".done in {time.time() - tt:2.2f}s")
-        
+
             self.old_date_str =  date_str
             self.initialized = True
-            self.fieldnames = fieldnames
         
     
     def _write_headers(self, filename, fieldnames):

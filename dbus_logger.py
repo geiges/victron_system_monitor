@@ -406,45 +406,48 @@ def update_loop(debug=False):
             
             row_data = meas_logger.log_step(t_now, data)
             
-            #adding logger row data to state
-            state.update(row_data)
-            
-            if simulate_system and (row_data is not None):
-                sim_row = simulator.update(raw_data=row_data,
-                                           t_now = t_now,
-                                           psystem=psystem)
+            if row_data is not None:
+                   
+                #adding logger row data to state
+                state.update(row_data)
                 
-                #adding simulation row data to state
-                state.update(sim_row)
-                
-                state['time_to_low_battery'] = simulator.time_to_low_battery()
-                
-                
+                if simulate_system:
+                    sim_row = simulator.update(raw_data=row_data,
+                                               t_now = t_now,
+                                               psystem=psystem)
                     
-                for key, var_value in sim_row.items():
+                    #adding simulation row data to state
+                    state.update(sim_row)
                     
-                    if key == 'time':
-                        continue
-                    sim_row[key] = round(var_value, config.round_digits)
-                
-                sim_logger.log_step(t_now, sim_row)
+                    state['time_to_low_battery'] = simulator.time_to_low_battery()
+                    
+                    
+                        
+                    for key, var_value in sim_row.items():
+                        
+                        if key == 'time':
+                            continue
+                        sim_row[key] = round(var_value, config.round_digits)
+                    
+                    sim_logger.log_step(t_now, sim_row)
         
         
+        
+        
+                # completing state information with system sum varibles
+                for sum_var in state_variables_to_sum:
+                    
+                    #find all non-system variables ending with sum_var
+                    vars_to_sum = [x for x in row_data.keys() if (not x.startswith('system')) and x.endswith(sum_var)]
+                    sum_value = sum(row_data[x] for x in vars_to_sum)
+                    state[f'system/{sum_var}'] = sum_value
+                
+                with open('data/state.json', 'w') as fp:
+                    json.dump(state, fp)
+        t_calc =  datetime.now(tz=timezone) - t_now
         
         print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
-        
-        # completing state information with system sum varibles
-        for sum_var in state_variables_to_sum:
-            
-            #find all non-system variables ending with sum_var
-            vars_to_sum = [x for x in row_data.keys() if (not x.startswith('system')) and x.endswith(sum_var)]
-            sum_value = sum(row_data[x] for x in vars_to_sum)
-            state[f'system/{sum_var}'] = sum_value
-        
-        with open('data/state.json', 'w') as fp:
-            json.dump(state, fp)
-        t_calc =  datetime.now(tz=timezone) - t_now
-
+       
         time.sleep(max(0, config.log_interval - t_calc.total_seconds()))
         
 

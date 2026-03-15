@@ -14,13 +14,15 @@ class VariableType(NamedTuple):
 
 class StateType(NamedTuple):
     basename: str
-    subaddress: str 
+    subaddress: str
     mapping: dict
+    toggle_values: list = []
 
 class BaseComponent(object):
     """
     Base class for system components to provide some common functions
     """
+    component_states = []
     
     def __init__(self, 
                  product_name, 
@@ -169,7 +171,8 @@ class VictronSolarCharger(BaseComponent):
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     component_states = [
-        StateType(basename = 'mppt_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'tracking_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'mppt_mode', subaddress='/Mode', mapping= {0: "ideal", 1: "working", 4: "off"}, toggle_values= [1,4]),
         ]
     
     
@@ -191,7 +194,8 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     component_states = [
-        StateType(basename = 'mppt_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'tracking_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'mppt_mode', subaddress='/Mode', mapping= {0: "ideal", 1: "working", 4: "off"}, toggle_values =[1,4]),
         StateType(basename = 'load_state', subaddress='/Load/State', mapping= {0: "off", 1: "on"})
         ]
     
@@ -213,6 +217,11 @@ class VictronMultiplusII(BaseComponent):
         VariableType(basename = "alarm_low_battery", subaddress="/Alarms/LowBattery", unit=''),
         VariableType(basename = "alarm_overload", subaddress="/Alarms/Overload", unit='')
         ]
+    
+    component_states = [
+        StateType(basename = 'inverter_mode', subaddress='/Mode', mapping= {3: "on", 4: "off"}, toggle_values= [3,4]),
+        ]
+    
     
     def __init__(self, product_name, short_name, const_consumption=0.0):
 

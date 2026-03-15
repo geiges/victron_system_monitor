@@ -12,6 +12,7 @@ import pathlib
 import csv
 import pytz
 import json
+import yaml
 from csv import DictWriter, DictReader
 from pydbus import SystemBus
 from utils import File_Logger, str2datetime, datetime2str
@@ -180,6 +181,135 @@ def retrieve_data(bus, variables_to_log, debug):
 
 
 
+def _toggle_command_id(short_name: str, basename: str, suffix: str) -> str:
+    return f"{short_name}_{basename}_{suffix}"
+
+
+def save_system_configuration(psystem, bus,
+                               sys_config_path: str = 'data/system_configuration.yaml',
+                               api_config_path: str = 'api_config.yml'):
+    """
+    Write data/system_configuration.yaml with actual runtime D-Bus service names
+    and toggle command info, then regenerate the command_endpoints in api_config.yml.
+    Called once at startup after bus discovery.
+    """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    components = {}
+
+    for short_name, component in psystem.items():
+        service = component.get_interface(bus)
+        toggle_commands = []
+
+        for state in component.component_states:
+            if not state.toggle_values:
+                continue
+            toggle_commands.append({
+                'basename': state.basename,
+                'path': state.subaddress,
+                'values': list(state.toggle_values),
+                'read_command_id':   _toggle_command_id(short_name, state.basename, 'read'),
+                'toggle_command_id': _toggle_command_id(short_name, state.basename, 'toggle'),
+            })
+
+        components[short_name] = {
+            'product_name': component.product_name,
+            'service': service,
+            'available': service is not None,
+            'toggle_commands': toggle_commands,
+        }
+
+    with open(sys_config_path, 'w') as f:
+        yaml.dump(
+            {'generated_at': now, 'components': components},
+            f, default_flow_style=False, allow_unicode=True, sort_keys=False,
+        )
+
+    _regenerate_api_config_commands(components, api_config_path)
+
+
+def _regenerate_api_config_commands(components: dict, api_config_path: str = 'api_config.yml'):
+    """
+    Replace only the command_endpoints section of api_config.yml with entries
+    derived from the discovered D-Bus services. All other sections are preserved.
+    """
+    with open(api_config_path) as f:
+        config = yaml.safe_load(f)
+
+    cmd_eps = []
+    for short_name, comp in components.items():
+        service = comp.get('service')
+        if not service or not comp.get('available'):
+            continue
+        for tc in comp.get('toggle_commands', []):
+            cmd_eps.append({
+                'id': tc['read_command_id'],
+                'type': 'dbus_read',
+                'description': f"Read {short_name} {tc['basename']}",
+                'service': service,
+                'path': tc['path'],
+            })
+            cmd_eps.append({
+                'id': tc['toggle_command_id'],
+                'type': 'dbus_toggle',
+                'description': f"Toggle {short_name} {tc['basename']}",
+                'service': service,
+                'path': tc['path'],
+                'values': tc['values'],
+            })
+
+    config['command_endpoints'] = cmd_eps
+
+    with open(api_config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+
+def retrieve_states(bus, states_to_log, debug=False):
+    """Read current discrete state values from D-Bus."""
+    values = {}
+    for var_name, conf in states_to_log.items():
+        try:
+            if debug:
+                print(f'Getting state {conf["address"]} from {conf["dbus_device"]}')
+            values[var_name] = bus.get(conf['dbus_device'], conf['address']).GetValue()
+        except Exception:
+            values[var_name] = None
+    return values
+
+
+def encode_state_code(state_values, ordered_names):
+    """
+    Encode all states into a zero-padded string. Each character position
+    corresponds to one state variable. The digit is the raw D-Bus integer
+    value (9 = unknown/out-of-range).
+    """
+    digits = []
+    for name in ordered_names:
+        raw = state_values.get(name)
+        if raw is None or not (0 <= raw <= 8):
+            digits.append('9')
+        else:
+            digits.append(str(raw))
+    return ''.join(digits)
+
+
+def save_state_mapping_yaml(states_to_log, path='data/state_mapping.yaml'):
+    """
+    Write a YAML file documenting the state column encoding.
+    Each position in the 'state' string maps to one state variable.
+    Called once at startup.
+    """
+    state_list = [
+        {
+            'position': pos,
+            'name': name,
+            'encoding': {str(k): v for k, v in conf['mapping'].items()},
+        }
+        for pos, (name, conf) in enumerate(states_to_log.items())
+    ]
+    with open(path, 'w') as f:
+        yaml.dump({'states': state_list}, f, default_flow_style=False, allow_unicode=True)
+
+
 def update_loop(debug=False):
     
     if os.environ.get("VICTRON_TEST_SESSION_BUS"):
@@ -195,6 +325,9 @@ def update_loop(debug=False):
     variables_to_log, missing_components = psystem.get_variables_to_log(bus)
     
     states_to_log, missing_components = psystem.get_states_to_log(bus)
+    ordered_state_names = list(states_to_log.keys())
+    save_state_mapping_yaml(states_to_log)
+    save_system_configuration(psystem, bus)
 
     "variables that are summed up over all components to system value"
     state_variables_to_sum = [
@@ -259,7 +392,8 @@ def update_loop(debug=False):
 
         try:
             data = retrieve_data(bus, variables_to_log, debug)
-            
+            state_values = retrieve_states(bus, states_to_log, debug)
+            data['state'] = encode_state_code(state_values, ordered_state_names)
         except Exception as E:
             data = None
             if debug:

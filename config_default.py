@@ -6,8 +6,6 @@ Created on Fri Jan  2 17:31:27 2026
 @author: and
 """
 import components
-import power_system
-
 #%%
 
 date_format = "%y-%m-%d"

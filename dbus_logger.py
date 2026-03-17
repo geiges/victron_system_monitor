@@ -25,27 +25,29 @@ timezone = pytz.timezone(config.tz)
 
 simulate_system = config.simulate_system
 
-class Logger_Daily_aggregates():
-    
-    def __init__(self, config):
-        
-        self.cfg = config
-        
+class AggregationLogger():
+
+    def __init__(self, config,
+                 input_dir='data',
+                 output_dir='data/aggregations/'):
+
+        self.module_config = config
+
         self.cfg = dict(
-            fieldnames = ['date', 'solar_yield'],
-            output_dir = 'data/daily/',
-            input_dir  = 'data')
-        
+            fieldnames=['date', 'DC_load_power', 'AC_power_output', 'solar_total'],
+            output_dir=output_dir,
+            input_dir=input_dir)
+
         self.cfg["out_filepath"] = os.path.join(
-            self.cfg["output_dir"], 'solar_daily.csv')
-        
+            self.cfg["output_dir"], 'daily.csv')
+
+        os.makedirs(self.cfg['output_dir'], exist_ok=True)
+
         if not os.path.exists(self.cfg["out_filepath"]):
             self._init_output_file()
-            
+
         self.last_date_str = self._get_last_date_logged()
         print(self.last_date_str)
-        
-        os.makedirs(self.cfg['output_dir'],exist_ok=True)
         
         
         
@@ -62,29 +64,59 @@ class Logger_Daily_aggregates():
         last_date_str =  lastRow.split(',')[0]
         return last_date_str
     
-    def _compute_day_yield(self, file):
+    def _compute_day_aggregates(self, file):
         path = pathlib.Path(file)
         date_str = path.name.replace('log_','').replace('.csv','')
         filepath = os.path.join(self.cfg['input_dir'], file)
         assert os.path.exists(filepath)
+        
+        vars_to_sum = ['DC_load_power', 'AC_power_output']
+        
+        aggregates = dict(
+            date = date_str,
+            )
+        
+        aggregates.update({x:0 for x in vars_to_sum})
         with open(filepath, mode="r") as fid:
             reader = DictReader(fid)
             first = next(reader)
+            last = first.copy()
             
+            #write mapping for summarion
+            sum_dict = dict()
+            for power_var_proxy in ['DC_load_current']:
+                
+                for var in [x for x in first.keys() if x.endswith(power_var_proxy)]:
+                    key = var.replace('current', 'power')
+                    sum_dict[key] = [var.replace('load_current', '0_voltage'),
+                                     var]
+                
+            
+            # variables that need to be summed up
             for row in reader:
-                pass
-            print(row)
-            last = row
+                
+                for calc_var, calc_components in sum_dict.items():
+                    row[calc_var] = float(row[calc_components[0]]) * float(row[calc_components[1]])
+                delta = (datetime.strptime(row['time'], config.time_format) - datetime.strptime(last['time'], config.time_format)).total_seconds()
+                for var in vars_to_sum:
+                    
+                    aggregates[var] += sum([float(row[x]) for x in row.keys() if x.endswith(var)]) * delta
+                    
+                last = row.copy()
+              
             
-            data = dict(
-                date = date_str,
-                solar_yield = round(
-                    float(last['mppt150/total_yield']) - float(first['mppt150/total_yield']),
-                    config.round_digits
-                    )
-                )
-            print(f"{first['mppt150/power_yield']} - {last['mppt150/power_yield']} = {data['solar_yield']}")
-        return data
+            
+            for var in vars_to_sum:
+                aggregates[var] = aggregates[var] / 3600 / 1000 # Ws to kWh
+            
+            solar_total = 0
+            
+            for var in [x for x in last.keys() if x.endswith("/total_yield")]:
+                solar_total += float(last[var]) - float(first[var])
+            
+            aggregates['solar_total'] = round(solar_total, config.round_digits)
+            
+            return aggregates
         
     
     def _init_output_file(self):
@@ -96,7 +128,7 @@ class Logger_Daily_aggregates():
             writer = DictWriter(fid_out, self.cfg["fieldnames"])
             writer.writeheader()
             for file in files:
-                data = self._compute_day_yield(file)
+                data = self._compute_day_aggregates(file)
                 writer.writerow(data)
                 
                 
@@ -114,7 +146,7 @@ class Logger_Daily_aggregates():
                 writer = DictWriter(fid_out, self.cfg["fieldnames"])
                 for date in date_list:
                     filepath  = "log_{date_str}.csv".format(date_str=datetime2str(date))
-                    data = self._compute_day_yield(filepath)
+                    data = self._compute_day_aggregates(filepath)
                     writer.writerow(data)
                 
             
@@ -351,7 +383,7 @@ def update_loop(debug=False):
     state['running_since'] = now.strftime("%y-%m-%d %H:%M")
 
     
-    daily_logger =Logger_Daily_aggregates(config)
+    daily_logger =AggregationLogger(config)
     
     
     if simulate_system:
@@ -420,8 +452,6 @@ def update_loop(debug=False):
                     state.update(sim_row)
                     
                     state['time_to_low_battery'] = simulator.time_to_low_battery()
-                    
-                    
                         
                     for key, var_value in sim_row.items():
                         

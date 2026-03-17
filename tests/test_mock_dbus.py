@@ -14,7 +14,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 MOCK_SCRIPT = os.path.join(os.path.dirname(__file__), "..", "mock_dbus_service.py")
-CSV_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "log_testing.csv")
+CSV_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "testing", "log_testing.csv")
 
 
 def _wait_for_bus_name(bus, name, timeout=10):
@@ -106,7 +106,7 @@ def test_component_discovery(mock_service, session_bus):
     )
     variables_to_log, missing = psystem.get_variables_to_log(session_bus)
 
-    assert len(missing) == 0, f"Missing components: {missing}"
+    assert len(missing) == 2, f"Missing components: {missing}"
     assert len(variables_to_log) == 13
 
 

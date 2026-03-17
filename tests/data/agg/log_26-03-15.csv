@@ -1,0 +1,4 @@
+time,mppt100/DC_0_voltage,mppt100/DC_load_current,multiplus/AC_power_output,mppt100/total_yield,mppt150/total_yield
+10:00:00,28.0,2.0,100.0,50.0000,200.0000
+10:00:10,28.0,2.0,100.0,50.0100,200.0100
+10:00:20,28.0,2.0,100.0,50.0200,200.0200

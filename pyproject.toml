@@ -19,7 +19,11 @@ cli = [
 ]
 
 [tool.uv.sources]
-ecowhen-data-api = { git = "ssh://git@github.com/geiges/ecowhen_data_api" }
+ecowhen-data-api = [ 
+    {git = "ssh://git@github.com/geiges/ecowhen_data_api", marker = "sys_platform != 'unknown'" },
+    { path = "../ecowhen_data_api", marker = "sys_platform == 'unknown'" } 
+    ]
+                    
 
 [dependency-groups]
 dev = [

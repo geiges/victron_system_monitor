@@ -1,6 +1,6 @@
 server:
   host: 0.0.0.0
-  port: 5101
+  port: 5100
   debug: false
 file_endpoints:
 - id: victron
@@ -8,7 +8,8 @@ file_endpoints:
   base_dir: data
   allow_patterns:
   - log_*.csv
-  - daily/solar_daily.csv
+  - sim_*.csv
+  - aggregates/daily.csv
   - state.json
   - state_mapping.yaml
   - system_configuration.yaml

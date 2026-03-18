@@ -1,10 +1,9 @@
 [project]
 name = "victron-system-monitor"
-version = "0.2.0"
+version = "0.1.0"
 description = "Python software to be un on Venus OS to log available solar, inverter and battery data and run a simplified battery model"
 readme = "README.md"
 requires-python = ">=3.12"
-
 dependencies = [
     "numpy>=2.4.1",
     "pydbus",
@@ -14,8 +13,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-ecowhen-data-api = {git = "ssh://git@github.com/geiges/ecowhen_data_api"}
-
+ecowhen-data-api = {path = "../ecowhen_data_api", marker = "sys_platform == 'unknown'" }
                     
 
 [dependency-groups]

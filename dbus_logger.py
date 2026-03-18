@@ -100,7 +100,7 @@ class AggregationLogger():
                 delta = (datetime.strptime(row['time'], config.time_format) - datetime.strptime(last['time'], config.time_format)).total_seconds()
                 for var in vars_to_sum:
                     
-                    aggregates[var] += sum([float(row[x]) for x in row.keys() if x.endswith(var)]) * delta
+                    aggregates[var] += sum([float(row[x]) for x in row.keys() if (x.endswith(var) and row.get(x,0) is not None)]) * delta
                     
                 last = row.copy()
               
@@ -128,9 +128,11 @@ class AggregationLogger():
             writer = DictWriter(fid_out, self.cfg["fieldnames"])
             writer.writeheader()
             for file in files:
-                data = self._compute_day_aggregates(file)
-                writer.writerow(data)
-                
+                try:
+                    data = self._compute_day_aggregates(file)
+                    writer.writerow(data)
+                except:
+                    print(f"file {file} could not be aggregated")
                 
         
     def update_daily_aggregates(self, date_str):

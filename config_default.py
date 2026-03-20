@@ -18,21 +18,50 @@ non_numeric_var = []
 simulate_system = True
 logger_skip_no_changes = True
 
+PV_componentes = {
+    'large_array' : dict(
+        lon = 12.68,
+        lat = 47.81,
+        azimuth =180.0,
+        tilt = 24,
+        PV_peak = 1125,
+        P_limit = 900,
+        ),
+    'small_array' : dict(
+        lon = 12.68,
+        lat =47.81,
+        azimuth=180.0,
+        tilt =76.0,
+        PV_peak = 750.0,
+        P_limit = 500.0
+        )
+    }
+    
+    
+        
+        
+
 #system setup
 system_components = [
     components.VictronSystem(None, short_name='system'),
     components.VictronSolarCharger('SmartSolar Charger MPPT 150/35',
                                    short_name='mppt150',
-                                   const_consumption=0.05),
+                                   const_consumption=0.05,
+                                   connected_PV = PV_componentes['large_array']
+                                   ),
     components.VictronSolarChargerWithDCLoad('SmartSolar Charger MPPT 100/20 48V',
                                    short_name='mppt100',
-                                   const_consumption=0.05),
+                                   const_consumption=0.05,
+                                   connected_PV = PV_componentes['small_array']
+                                   ),
     components.VictronMultiplusII('MultiPlus-II 24/3000/70-32',
                                   short_name='multiplus',
-                                  const_consumption=0.05),
+                                  const_consumption=0.05
+                                  ),
     components.VictronPhoenix24_800('Phoenix Inverter 24V 800VA 230V', 
                                     short_name='phoenix',
-                                    const_consumption=0.1)
+                                    const_consumption=0.1
+                                    )
     ]
 
 # system connectors (relevant for measurements)

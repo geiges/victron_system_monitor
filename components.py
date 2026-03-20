@@ -40,6 +40,41 @@ class BaseComponent(object):
             f"{self.short_name}/{var.basename}" for var in self.component_variables
             ]
         
+    def init_connected_PV(self, 
+                lon,
+                lat,
+                azimuth,
+                tilt,
+                PV_peak,
+                P_limit):
+        """
+        Set the data for the PV system connected to Victron device
+
+        Parameters
+        ----------
+        lon : TYPE
+            DESCRIPTION.
+        lat : TYPE
+            DESCRIPTION.
+        azimuth : TYPE
+            DESCRIPTION.
+        tilt : TYPE
+            DESCRIPTION.
+        PV_peak : TYPE
+            DESCRIPTION.
+        P_limit : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self. PV_system = dict(lon=lon, lat=lat, azimuth=azimuth, tilt=tilt, PV_peak = PV_peak, P_limit=P_limit)
+            
+            
+        
     def _components_on_bus(self, dbus):
         """
         Check is type of device is available on bus and returns instances
@@ -176,11 +211,14 @@ class VictronSolarCharger(BaseComponent):
         ]
     
     
-    def __init__(self, product_name, short_name, const_consumption=0.0):
+    def __init__(self, product_name, short_name, const_consumption=0.0, connected_PV=None):
          
         component_type = 'com.victronenergy.solarcharger'
         super().__init__(product_name, short_name, component_type, const_consumption) 
         self.connector_R0 = None
+        
+        if connected_PV is not None:
+            self.init_connected_PV(**connected_PV)
         
 class VictronSolarChargerWithDCLoad(BaseComponent):
     """
@@ -199,7 +237,7 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
         StateType(basename = 'load_state', subaddress='/Load/State', mapping= {0: "off", 1: "on"})
         ]
     
-    def __init__(self, product_name, short_name, const_consumption=0.0):
+    def __init__(self, product_name, short_name, const_consumption=0.0, connected_PV=None):
          
         component_type = 'com.victronenergy.solarcharger'
         super().__init__(product_name, short_name, component_type, const_consumption) 
@@ -223,13 +261,14 @@ class VictronMultiplusII(BaseComponent):
         ]
     
     
-    def __init__(self, product_name, short_name, const_consumption=0.0):
+    def __init__(self, product_name, short_name, const_consumption=0.0, connected_PV=None):
 
         component_type ='com.victronenergy.vebus'
         super().__init__(product_name, short_name, component_type, const_consumption) 
         self.connector_R0 = None
         
-          
+        if connected_PV is not None:
+            self.init_connected_PV(**connected_PV)
         
 class VictronPhoenix24_800(BaseComponent):
     """

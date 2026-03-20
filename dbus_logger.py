@@ -108,7 +108,7 @@ class AggregationLogger():
             
             for var in vars_to_sum:
                 aggregates[var] = aggregates[var] / 3600 / 1000 # Ws to kWh
-            
+                aggregates[var] = round( aggregates[var], config.round_digits)
             solar_total = 0
             
             for var in [x for x in last.keys() if x.endswith("/total_yield")]:
@@ -138,7 +138,7 @@ class AggregationLogger():
     def update_daily_aggregates(self, date_str):
         
         if self.last_date_str != date_str:
-            
+            print('Aggregating daily aggregates')
             time_delta = str2datetime(date_str) - str2datetime(self.last_date_str)
             base = str2datetime(self.last_date_str)
             date_list = [base + timedelta(days=x) for x in range(1, time_delta.days)]
@@ -152,7 +152,8 @@ class AggregationLogger():
                     writer.writerow(data)
                 
             
-            self.last_date_str = date_str
+            
+            self.last_date_str = date_list[-1]
             print("finished aggregate update")
         
 

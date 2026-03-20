@@ -138,7 +138,7 @@ class AggregationLogger():
     def update_daily_aggregates(self, date_str):
         
         if self.last_date_str != date_str:
-            print('Aggregating daily aggregates')
+            
             time_delta = str2datetime(date_str) - str2datetime(self.last_date_str)
             base = str2datetime(self.last_date_str)
             date_list = [base + timedelta(days=x) for x in range(1, time_delta.days)]
@@ -152,8 +152,7 @@ class AggregationLogger():
                     writer.writerow(data)
                 
             
-            
-            self.last_date_str = date_list[-1]
+            self.last_date_str = date_str
             print("finished aggregate update")
         
 

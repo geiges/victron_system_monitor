@@ -206,7 +206,7 @@ class VictronSolarCharger(BaseComponent):
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     component_states = [
-        StateType(basename = 'tracking_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'tracking_state', subaddress='/State', mapping= {0 : 'off', 3: "bulk", 4: "absorbtion", 5: "float"}),
         StateType(basename = 'mppt_mode', subaddress='/Mode', mapping= {0: "ideal", 1: "working", 4: "off"}, toggle_values= [1,4]),
         ]
     
@@ -232,7 +232,7 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
         ]
     component_states = [
-        StateType(basename = 'tracking_state', subaddress='/State', mapping= {3: "bulk", 4: "absorbtion", 5: "float"}),
+        StateType(basename = 'tracking_state', subaddress='/State', mapping= {0 : 'off', 3: "bulk", 4: "absorbtion", 5: "float"}),
         StateType(basename = 'mppt_mode', subaddress='/Mode', mapping= {0: "ideal", 1: "working", 4: "off"}, toggle_values =[1,4]),
         StateType(basename = 'load_state', subaddress='/Load/State', mapping= {0: "off", 1: "on"})
         ]

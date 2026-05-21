@@ -249,6 +249,7 @@ class VictronMultiplusII(BaseComponent):
     """
     component_variables =[
         VariableType(basename = "AC_power_output", subaddress = "/Ac/Out/P", unit='W'),
+        VariableType(basename = "AC_frequency", subaddress = "Ac/Out/L1/F", unit='Hz'), 
         VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
         VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
         VariableType(basename = "alarm_temperature", subaddress="/Alarms/TemperatureSensor", unit=''),

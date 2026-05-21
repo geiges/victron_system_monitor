@@ -9,8 +9,47 @@ file_endpoints:
   allow_patterns:
   - log_*.csv
   - sim_*.csv
-  - aggregates/daily.csv
+  - aggregations/daily.csv
   - state.json
   - state_mapping.yaml
   - system_configuration.yaml
-command_endpoints: []
+command_endpoints:
+- id: mppt150_mppt_mode_read
+  type: dbus_read
+  description: Read mppt150 mppt_mode
+  service: com.victronenergy.solarcharger.ttyUSB0
+  path: /Mode
+- id: mppt150_mppt_mode_toggle
+  type: dbus_toggle
+  description: Toggle mppt150 mppt_mode
+  service: com.victronenergy.solarcharger.ttyUSB0
+  path: /Mode
+  values:
+  - 1
+  - 4
+- id: mppt100_mppt_mode_read
+  type: dbus_read
+  description: Read mppt100 mppt_mode
+  service: com.victronenergy.solarcharger.ttyUSB1
+  path: /Mode
+- id: mppt100_mppt_mode_toggle
+  type: dbus_toggle
+  description: Toggle mppt100 mppt_mode
+  service: com.victronenergy.solarcharger.ttyUSB1
+  path: /Mode
+  values:
+  - 1
+  - 4
+- id: multiplus_inverter_mode_read
+  type: dbus_read
+  description: Read multiplus inverter_mode
+  service: com.victronenergy.vebus.ttyUSB2
+  path: /Mode
+- id: multiplus_inverter_mode_toggle
+  type: dbus_toggle
+  description: Toggle multiplus inverter_mode
+  service: com.victronenergy.vebus.ttyUSB2
+  path: /Mode
+  values:
+  - 3
+  - 4

@@ -399,7 +399,7 @@ def update_loop(debug=False):
                 reader = csv.DictReader(fid)
                 
                 for row in reader:
-                    print(row)
+                    #print(row)
                     soc = row['SOC_counted']
                     t_previous = row['time']
                     

@@ -9,6 +9,7 @@ dependencies = [
     "pydbus",
     "pytz>=2025.2",
     "pyyaml>=6.0",
+    "requests>=2.32",
     "ecowhen-data-api",
 ]
 [project.optional-dependencies]

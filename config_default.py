@@ -92,6 +92,25 @@ batt_config_V1 = {
     "low_battery_SOC" : 0.2
 }
 
+import aux_components as aux_comp
+
+# Auxiliary (non-D-Bus) data sources polled by aux_logger.py.
+aux_components = [
+    aux_comp.TasmotaSmartPlug(
+        short_name='wallbox',
+        url='http://tasmota-158A57-2647',
+        power_scale=0.81,
+    ),
+    aux_comp.TasmotaSmartPlug(
+        short_name='ac_inverter',
+        url='http://tasmota-156ecf-3791',
+    ),
+    aux_comp.DeyeSunInverter(
+        short_name='ac_mppt',
+        url='http://admin:admin@192.168.1.165/status.html',
+    ),
+]
+
 try:
     # try to import actual config file, failes if no personal file is found
     from config import *

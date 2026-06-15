@@ -29,5 +29,9 @@ tmux new-session -d -s "$SESSION" -n "logger" \
 tmux new-window -t "$SESSION" -n "api" \
     "cd '$PROJECT_DIR' && uv run rest_api_app.py; read -p 'Press enter to close'"
 
-echo "Started tmux session '$SESSION' with windows: logger, api"
+# Add the auxiliary logger in a third window
+tmux new-window -t "$SESSION" -n "aux_logger" \
+    "cd '$PROJECT_DIR' && uv run aux_logger.py; read -p 'Press enter to close'"
+
+echo "Started tmux session '$SESSION' with windows: logger, api, aux_logger"
 echo "  Attach with: tmux attach -t $SESSION"

@@ -9,10 +9,12 @@ file_endpoints:
   allow_patterns:
   - log_*.csv
   - sim_*.csv
+  - aux_*.csv
   - aggregations/daily.csv
   - state.json
   - state_mapping.yaml
   - system_configuration.yaml
+  - aux_state.yaml
 command_endpoints:
 - id: mppt150_mppt_mode_read
   type: dbus_read

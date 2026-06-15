@@ -99,11 +99,13 @@ aux_components = [
     aux_comp.TasmotaSmartPlug(
         short_name='wallbox',
         url='http://tasmota-158A57-2647',
+        fallback_url='http://192.168.1.185',
         power_scale=0.81,
     ),
     aux_comp.TasmotaSmartPlug(
         short_name='ac_inverter',
         url='http://tasmota-156ecf-3791',
+        fallback_url='http://192.168.1.60',
     ),
     aux_comp.DeyeSunInverter(
         short_name='ac_mppt',

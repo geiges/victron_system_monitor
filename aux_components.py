@@ -86,7 +86,10 @@ class TasmotaSmartPlug(BaseAuxComponent):
     short_name : str
         Column prefix used in the CSV (e.g. 'wallbox').
     url : str
-        Base URL of the Tasmota device, e.g. 'http://tasmota-158A57-2647'.
+        Primary base URL, e.g. 'http://tasmota-158A57-2647' (mDNS hostname).
+    fallback_url : str | None
+        Static-IP URL tried when the primary URL fails at the network level,
+        e.g. 'http://192.168.1.185'. Useful on hosts without mDNS support.
     power_scale : float
         Multiplicative calibration factor applied to both Power and Today
         readings. Defaults to 1.0.
@@ -100,25 +103,31 @@ class TasmotaSmartPlug(BaseAuxComponent):
     ]
 
     def __init__(self, short_name: str, url: str,
+                 fallback_url: str | None = None,
                  power_scale: float = 1.0, timeout: float = 3.0):
         super().__init__(short_name)
         self.url = url.rstrip('/')
+        self.fallback_url = fallback_url.rstrip('/') if fallback_url else None
         self.power_scale = power_scale
         self.timeout = timeout
 
     def fetch(self) -> dict:
         result = {var.basename: None for var in self.component_variables}
-        try:
-            resp = requests.get(
-                f"{self.url}/cm?cmnd=Status%208",
-                timeout=self.timeout,
-            )
-            resp.raise_for_status()
-            energy = resp.json()["StatusSNS"]["ENERGY"]
-            result['power_w']   = float(energy["Power"]) * self.power_scale
-            result['today_kwh'] = float(energy["Today"]) * self.power_scale
-        except Exception:
-            print(f"Warning: {self!r} unreachable at {self.url}")
+        urls = [u for u in (self.url, self.fallback_url) if u]
+        for url in urls:
+            try:
+                resp = requests.get(
+                    f"{url}/cm?cmnd=Status%208",
+                    timeout=self.timeout,
+                )
+                resp.raise_for_status()
+                energy = resp.json()["StatusSNS"]["ENERGY"]
+                result['power_w']   = float(energy["Power"]) * self.power_scale
+                result['today_kwh'] = float(energy["Today"]) * self.power_scale
+                return result
+            except requests.exceptions.RequestException:
+                pass
+        print(f"Warning: {self!r} unreachable at all URLs {urls}")
         return result
 
 

@@ -147,10 +147,17 @@ class AggregationLogger():
             with open(self.cfg["out_filepath"], mode="a") as fid_out:
                 writer = DictWriter(fid_out, self.cfg["fieldnames"])
                 for date in date_list:
-                    filepath  = "log_{date_str}.csv".format(date_str=datetime2str(date))
-                    data = self._compute_day_aggregates(filepath)
+                    
+                    try:
+                        filepath  = "log_{date_str}.csv".format(date_str=datetime2str(date))
+                        data = self._compute_day_aggregates(filepath)
+                        print(f'Data aggregated for {date}')
+                    except:
+                        print(f'Error aggregating data for date:{date}')
+                        data = dict(
+                            date = date,
+                            )
                     writer.writerow(data)
-                
             
             self.last_date_str = date_str
             print("finished aggregate update")
@@ -436,7 +443,7 @@ def update_loop(debug=False):
 
         if data is not None:
             date_str =  t_now.strftime(config.date_format)
-            #daily_logger.update_daily_aggregates(date_str)
+            daily_logger.update_daily_aggregates(date_str)
             
             row_data = meas_logger.log_step(t_now, data)
             

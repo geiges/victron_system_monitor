@@ -20,6 +20,7 @@ class AgentResult:
 
 class BaseAgent(ABC):
     name: str = ""
+    fast_cycle: bool = False  # True → runs at safety_interval; False → control_interval
 
     @abstractmethod
     def run(self, projection, config) -> AgentResult:

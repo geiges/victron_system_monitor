@@ -33,7 +33,13 @@ def _load_agents():
     from control.agents.system_safety import SystemSafetyAgent
     from control.agents.time_based import TimeBasedAgent
     from control.agents.forecast_aware import ForecastAwareAgent
-    return [SystemSafetyAgent(), TimeBasedAgent(), ForecastAwareAgent()]
+    from control.agents.soc_wallbox_charge import SocWallboxChargeAgent
+    return [
+        SystemSafetyAgent(),
+        SocWallboxChargeAgent(DATA_DIR),
+        TimeBasedAgent(),
+        ForecastAwareAgent(),
+    ]
 
 
 def _arbitrate(results: list) -> Schedule:
@@ -102,7 +108,7 @@ def run_loop(config: ControlConfig) -> None:
 
         results = []
         for agent in agents:
-            if agent.name != "system_safety" and not run_planning:
+            if not agent.fast_cycle and not run_planning:
                 continue
             if not agent.is_enabled(config):
                 continue

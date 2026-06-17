@@ -6,6 +6,7 @@ from control.schedule import ScheduledAction
 
 class SystemSafetyAgent(BaseAgent):
     name = "system_safety"
+    fast_cycle = True
 
     def run(self, projection, config) -> AgentResult:
         current = projection.current

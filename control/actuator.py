@@ -1,22 +1,29 @@
-"""Execute scheduled D-Bus actions via dbus-send.
+"""Execute scheduled actions via dbus-send (D-Bus) or HTTP (Tasmota).
 
-Service addresses (ttyUSB numbers) are looked up at runtime from
+D-Bus service addresses (ttyUSB numbers) are looked up at runtime from
 data/system_configuration.yaml, which the D-Bus logger writes on startup.
+Tasmota URLs come directly from ActuatorsConfig.
 """
 import subprocess
 from pathlib import Path
 from typing import Optional
 
+import requests
 import yaml
 
 from control.schedule import ScheduledAction
 from control.config import ActuatorsConfig
 
 
-# Maps actuator name → (component short name in system_config, D-Bus path)
-_ACTUATOR_SPECS = {
+# D-Bus actuators: name → (component name in system_config, D-Bus path)
+_DBUS_SPECS = {
     "multiplus_mode": ("multiplus", "/Mode"),
     "mppt100_load":   ("mppt100",   "/Load/State"),
+}
+
+# Tasmota actuators: name → (primary URL attr, fallback URL attr)
+_TASMOTA_SPECS = {
+    "wallbox_charge": ("wallbox_tasmota_url", "wallbox_tasmota_fallback_url"),
 }
 
 
@@ -34,18 +41,12 @@ def _get_service(system_config_path: Path, component_name: str) -> Optional[str]
         return None
 
 
-def execute_action(
+def _execute_dbus_action(
     action: ScheduledAction,
     config: ActuatorsConfig,
-    system_config_path: Path = Path("data/system_configuration.yaml"),
+    system_config_path: Path,
 ) -> bool:
-    """Execute a ScheduledAction via dbus-send. Returns True on success."""
-    spec = _ACTUATOR_SPECS.get(action.actuator)
-    if spec is None:
-        print(f"[actuator] unknown actuator: {action.actuator!r}")
-        return False
-
-    component_name, dbus_path = spec
+    component_name, dbus_path = _DBUS_SPECS[action.actuator]
     service = _get_service(system_config_path, component_name)
     if service is None:
         print(f"[actuator] component {component_name!r} not available in system config")
@@ -58,7 +59,6 @@ def execute_action(
         "com.victronenergy.BusItem.SetValue",
         f"variant:int32:{action.value}",
     ]
-
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
@@ -69,3 +69,43 @@ def execute_action(
     except Exception as exc:
         print(f"[actuator] {action.actuator}={action.value} ERROR: {exc}")
         return False
+
+
+def _execute_tasmota_action(action: ScheduledAction, config: ActuatorsConfig) -> bool:
+    url_attr, fallback_attr = _TASMOTA_SPECS[action.actuator]
+    primary = getattr(config, url_attr, "")
+    fallback = getattr(config, fallback_attr, "")
+    urls = [u for u in (primary, fallback) if u]
+
+    if not urls:
+        print(f"[actuator] no URL configured for {action.actuator!r}")
+        return False
+
+    cmd = f"Power {action.value}"
+    for url in urls:
+        try:
+            resp = requests.get(
+                f"{url.rstrip('/')}/cm",
+                params={"cmnd": cmd},
+                timeout=5,
+            )
+            resp.raise_for_status()
+            print(f"[actuator] {action.actuator}={action.value} → {url} OK")
+            return True
+        except Exception as exc:
+            print(f"[actuator] {action.actuator} failed at {url}: {exc}")
+    return False
+
+
+def execute_action(
+    action: ScheduledAction,
+    config: ActuatorsConfig,
+    system_config_path: Path = Path("data/system_configuration.yaml"),
+) -> bool:
+    """Execute a ScheduledAction. Returns True on success."""
+    if action.actuator in _TASMOTA_SPECS:
+        return _execute_tasmota_action(action, config)
+    if action.actuator in _DBUS_SPECS:
+        return _execute_dbus_action(action, config, system_config_path)
+    print(f"[actuator] unknown actuator: {action.actuator!r}")
+    return False

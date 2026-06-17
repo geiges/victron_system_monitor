@@ -68,10 +68,24 @@ class ForecastAwareConfig:
 
 
 @dataclass
+class SocWallboxChargeConfig:
+    enabled: bool = True
+    soc_on_threshold: float = 0.99   # SOC considered "full"
+    soc_on_minutes: int = 30         # minutes at full before turning on
+    soc_off_threshold: float = 0.25  # SOC below which wallbox is turned off
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SocWallboxChargeConfig":
+        valid = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in d.items() if k in valid})
+
+
+@dataclass
 class AgentsConfig:
     system_safety: SystemSafetyConfig = field(default_factory=SystemSafetyConfig)
     time_based: TimeBasedConfig = field(default_factory=TimeBasedConfig)
     forecast_aware: ForecastAwareConfig = field(default_factory=ForecastAwareConfig)
+    soc_wallbox_charge: SocWallboxChargeConfig = field(default_factory=SocWallboxChargeConfig)
 
     @classmethod
     def from_dict(cls, d: dict) -> "AgentsConfig":
@@ -79,6 +93,7 @@ class AgentsConfig:
             system_safety=SystemSafetyConfig.from_dict(d.get("system_safety", {})),
             time_based=TimeBasedConfig.from_dict(d.get("time_based", {})),
             forecast_aware=ForecastAwareConfig.from_dict(d.get("forecast_aware", {})),
+            soc_wallbox_charge=SocWallboxChargeConfig.from_dict(d.get("soc_wallbox_charge", {})),
         )
 
 
@@ -90,6 +105,9 @@ class ActuatorsConfig:
     mppt100_load: bool = True
     mppt100_load_on: int = 1
     mppt100_load_off: int = 0
+    wallbox_charge: bool = True
+    wallbox_tasmota_url: str = "http://tasmota-158A57-2647"
+    wallbox_tasmota_fallback_url: str = "http://192.168.1.185"
 
     @classmethod
     def from_dict(cls, d: dict) -> "ActuatorsConfig":

@@ -59,6 +59,92 @@ def _read_last_soc_from_sim(data_dir: Path) -> Optional[float]:
         return None
 
 
+def minutes_at_full_soc(
+    data_dir: Path = Path("data"),
+    soc_full_threshold: float = 0.99,
+    max_data_age_seconds: float = 120.0,
+    _now: Optional[datetime] = None,
+) -> Optional[float]:
+    """Return how many minutes SOC has been continuously at or above
+    soc_full_threshold, based on the most recent sim CSV.
+
+    Returns None (agent becomes inactive) if:
+    - No sim CSV exists
+    - The sim file is not from today
+    - The latest entry is older than max_data_age_seconds
+
+    Uses the sim CSV rather than the log CSV because only sim files carry
+    SOC_counted / SOC_Kf columns.  The optional _now parameter overrides
+    datetime.now() for testing.
+    """
+    sim_files = sorted(data_dir.glob("sim_*.csv"))
+    if not sim_files:
+        return None
+
+    now = _now or datetime.now()
+    latest = sim_files[-1]
+    date_str = latest.stem.replace("sim_", "")
+    try:
+        file_date = datetime.strptime(date_str, "%y-%m-%d").date()
+    except ValueError:
+        return None
+    
+    # Guard: file must be from today
+    if file_date != now.date():
+        return None
+
+    first_row_time: Optional[datetime] = None
+    last_row_time: Optional[datetime] = None
+    last_row_soc: Optional[float] = None
+    last_below_threshold: Optional[datetime] = None
+
+    try:
+        with open(latest, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                soc = None
+                for key in ("SOC_counted", "SOC_Kf"):
+                    raw = row.get(key, "")
+                    if raw not in ("", "nan", "None", None):
+                        try:
+                            soc = float(raw)
+                            break
+                        except ValueError:
+                            pass
+                if soc is None:
+                    continue
+                try:
+                    t = datetime.strptime(row["time"], "%H:%M:%S")
+                    row_time = datetime(
+                        file_date.year, file_date.month, file_date.day,
+                        t.hour, t.minute, t.second,
+                    )
+                except (KeyError, ValueError):
+                    continue
+                if first_row_time is None:
+                    first_row_time = row_time
+                last_row_time = row_time
+                last_row_soc = soc
+                if soc < soc_full_threshold:
+                    last_below_threshold = row_time
+    except OSError:
+        return None
+
+    if first_row_time is None:
+        return None  # empty file
+
+    # Guard: latest entry must be fresh
+    if (now - last_row_time).total_seconds() > max_data_age_seconds:
+        return None
+
+    # SOC not currently at full — 0 minutes of continuous full charge
+    if last_row_soc < soc_full_threshold:
+        return 0.0
+
+    ref = last_below_threshold if last_below_threshold is not None else first_row_time
+    return (now - ref).total_seconds() / 60.0
+
+
 def read_current_state(data_dir: Path = Path("data")) -> CurrentState:
     state_file = data_dir / "state.json"
     if not state_file.exists():

@@ -1,6 +1,9 @@
+import csv
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from control.agents.system_safety import SystemSafetyAgent
+from control.agents.soc_wallbox_charge import SocWallboxChargeAgent
 from control.config import ControlConfig
 from control.state import CurrentState
 from control.projection import SystemProjection, ProjectedHour
@@ -92,6 +95,110 @@ def test_safety_high_temp_no_duplicate_multiplus_action():
     result = SystemSafetyAgent().run(_make_projection(soc=0.10, temp=46.0), ControlConfig())
     mp_actions = [a for a in result.actions if a.actuator == "multiplus_mode"]
     assert len(mp_actions) == 1
+
+
+# ---------------------------------------------------------------------------
+# SocWallboxChargeAgent helpers
+# ---------------------------------------------------------------------------
+
+def _write_sim_csv(path, rows):
+    """rows: list of (time: datetime, soc: float)"""
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["time", "SOC_counted", "SOC_Kf"])
+        for t, soc in rows:
+            writer.writerow([t.strftime("%H:%M:%S"), soc, soc])
+
+
+def _wallbox_projection(soc=0.80):
+    return _make_projection(soc=soc)
+
+
+def _wallbox_cfg():
+    cfg = ControlConfig()
+    cfg.agents.soc_wallbox_charge.enabled = True
+    cfg.agents.soc_wallbox_charge.soc_on_minutes = 30
+    cfg.agents.soc_wallbox_charge.soc_on_threshold = 0.99
+    cfg.agents.soc_wallbox_charge.soc_off_threshold = 0.25
+    return cfg
+
+
+# ---------------------------------------------------------------------------
+# SocWallboxChargeAgent tests
+# ---------------------------------------------------------------------------
+
+def test_wallbox_agent_name():
+    assert SocWallboxChargeAgent().name == "soc_wallbox_charge"
+
+
+def test_wallbox_agent_fast_cycle():
+    assert SocWallboxChargeAgent.fast_cycle is True
+
+
+def test_wallbox_no_action_when_no_sim_files(tmp_path):
+    # SOC must be at the full threshold so the agent tries to read sim files
+    result = SocWallboxChargeAgent(tmp_path).run(_wallbox_projection(soc=1.0), _wallbox_cfg())
+    assert result.actions == []
+    assert "unavailable" in result.rationale.lower()
+
+
+def test_wallbox_off_when_soc_below_threshold(tmp_path):
+    # SOC below off threshold — wallbox should be turned off immediately
+    result = SocWallboxChargeAgent(tmp_path).run(
+        _wallbox_projection(soc=0.20), _wallbox_cfg()
+    )
+    actuators = {a.actuator for a in result.actions}
+    assert "wallbox_charge" in actuators
+    assert next(a for a in result.actions if a.actuator == "wallbox_charge").value == 0
+
+
+def test_wallbox_off_action_is_immediate(tmp_path):
+    result = SocWallboxChargeAgent(tmp_path).run(
+        _wallbox_projection(soc=0.10), _wallbox_cfg()
+    )
+    for action in result.actions:
+        assert action.is_due(window_seconds=60.0)
+
+
+def test_wallbox_on_after_sufficient_time_at_full(tmp_path):
+    # Create sim CSV: SOC at 1.0 for the past 40 minutes; last row ≈ now
+    now = datetime.now()
+    path = tmp_path / f"sim_{now.strftime('%y-%m-%d')}.csv"
+    rows = [(now - timedelta(minutes=40 - i), 1.0) for i in range(41)]  # last row = now
+    _write_sim_csv(path, rows)
+
+    result = SocWallboxChargeAgent(tmp_path).run(_wallbox_projection(soc=1.0), _wallbox_cfg())
+    actuators = {a.actuator for a in result.actions}
+    assert "wallbox_charge" in actuators
+    assert next(a for a in result.actions if a.actuator == "wallbox_charge").value == 1
+
+
+def test_wallbox_waits_when_not_enough_time_at_full(tmp_path):
+    # Create sim CSV: SOC at 1.0 for only 15 minutes; last row ≈ now
+    now = datetime.now()
+    path = tmp_path / f"sim_{now.strftime('%y-%m-%d')}.csv"
+    rows = [(now - timedelta(minutes=15 - i), 1.0) for i in range(16)]  # last row = now
+    _write_sim_csv(path, rows)
+
+    result = SocWallboxChargeAgent(tmp_path).run(_wallbox_projection(soc=1.0), _wallbox_cfg())
+    assert result.actions == []
+    assert "waiting" in result.rationale.lower()
+
+
+def test_wallbox_metrics_always_present(tmp_path):
+    result = SocWallboxChargeAgent(tmp_path).run(_wallbox_projection(), _wallbox_cfg())
+    assert "soc" in result.metrics
+
+
+def test_wallbox_metrics_include_minutes_when_available(tmp_path):
+    now = datetime.now()
+    path = tmp_path / f"sim_{now.strftime('%y-%m-%d')}.csv"
+    rows = [(now - timedelta(minutes=10 - i), 1.0) for i in range(11)]  # last row = now
+    _write_sim_csv(path, rows)
+
+    result = SocWallboxChargeAgent(tmp_path).run(_wallbox_projection(soc=1.0), _wallbox_cfg())
+    assert "minutes_at_full" in result.metrics
+    assert result.metrics["minutes_at_full"] is not None
 
 
 # --- Metrics ---

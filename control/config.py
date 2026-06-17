@@ -12,8 +12,8 @@ class BatteryConfig:
     c1: float = 2000.0
     ncells: int = 8
     charge_efficiency: float = 1.0
-    min_soc: float = 0.15
-    min_voltage: float = 22.5
+    min_soc: float = 0.20
+    min_voltage: float = 24.5
     max_temp: float = 45.0
 
     @classmethod

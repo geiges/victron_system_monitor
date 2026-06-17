@@ -1,5 +1,7 @@
+import csv
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 from battery import Battery
@@ -82,3 +84,18 @@ class BatteryProjector:
             horizon_hours=cfg.horizon_hours,
             hours=hours,
         )
+
+
+def save_projection_csv(projection: SystemProjection, path: Path) -> None:
+    """Write the projected hourly states to a CSV file (overwritten each cycle)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["time", "solar_w", "estimated_load_w", "projected_soc"])
+        for h in projection.hours:
+            writer.writerow([
+                h.time.strftime("%Y-%m-%d %H:%M"),
+                round(h.solar_w, 1),
+                round(h.estimated_load_w, 1),
+                round(h.projected_soc, 4),
+            ])

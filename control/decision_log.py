@@ -47,7 +47,10 @@ def build_log_entry(state, forecast, projection, results, schedule) -> dict:
             "soc_now": state.soc,
             "soc_at_end": projected_socs[-1] if projected_socs else None,
             "min_soc": min(projected_socs) if projected_socs else None,
+            "max_soc": max(projected_socs) if projected_socs else None,
             "min_soc_hour": projected_socs.index(min(projected_socs)) + 1
+                            if projected_socs else None,
+            "max_soc_hour": projected_socs.index(max(projected_socs)) + 1
                             if projected_socs else None,
         },
         "agents": [r.to_dict() for r in results],

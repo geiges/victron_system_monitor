@@ -17,7 +17,7 @@ load_dotenv()
 from control.config import ControlConfig
 from control.state import read_current_state, StateUnavailableError
 from control.forecast import SolarForecastProvider
-from control.projection import BatteryProjector
+from control.projection import BatteryProjector, save_projection_csv
 from control.schedule import Schedule
 from control.decision_log import DecisionLog, build_log_entry
 from control.actuator import execute_action
@@ -26,6 +26,7 @@ DATA_DIR = Path("data")
 CONFIG_PATH = DATA_DIR / "control_config.yaml"
 SCHEDULE_PATH = DATA_DIR / "control_schedule.json"
 LOG_PATH = DATA_DIR / "control_log.jsonl"
+PROJECTION_PATH = DATA_DIR / "projection_latest.csv"
 
 
 def _load_agents():
@@ -121,6 +122,7 @@ def run_loop(config: ControlConfig) -> None:
 
         if run_planning:
             last_planning_t = t_start
+            save_projection_csv(projection, PROJECTION_PATH)
 
         schedule = _arbitrate(results)
         schedule.save(SCHEDULE_PATH)
@@ -131,8 +133,10 @@ def run_loop(config: ControlConfig) -> None:
         entry = build_log_entry(state, forecast, projection, results, schedule)
         log.append(entry)
 
-        print(f"[runner] cycle done — SOC={state.soc:.1%}, "
-              f"projected_min={entry['projection']['min_soc']:.1%}, "
+        proj = entry["projection"]
+        print(f"[runner] cycle done — SOC={state.soc:.1%}, without load"
+              f"min={proj['min_soc']:.1%} (in {proj['min_soc_hour']}h), "
+              f"max={proj['max_soc']:.1%} (in {proj['max_soc_hour']}h), "
               f"actions={len(schedule.actions)}")
 
         _sleep_to_next_interval(t_start, config.safety_interval_seconds)

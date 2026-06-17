@@ -1,6 +1,9 @@
 """
 Integration test: start mock_dbus_service, then verify that the logger's
 discovery and data-retrieval logic reads back the values from a CSV file.
+
+Requires pydbus and a live D-Bus session daemon (Venus OS / Linux desktop).
+These tests are skipped automatically in environments without pydbus.
 """
 import csv
 import os
@@ -8,6 +11,8 @@ import subprocess
 import sys
 import time
 import pytest
+
+pydbus = pytest.importorskip("pydbus", reason="pydbus not available — skipping D-Bus integration tests")
 
 
 # ---------------------------------------------------------------------------

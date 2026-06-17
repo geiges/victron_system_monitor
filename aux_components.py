@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 import re
 import requests
 
@@ -57,7 +57,7 @@ class DummyAuxDevice(BaseAuxComponent):
         AuxVariableType(basename='value_b', unit=''),
     ]
 
-    def __init__(self, short_name: str, dummy_values: dict | None = None):
+    def __init__(self, short_name: str, dummy_values: Optional[dict] = None):
         super().__init__(short_name)
         if dummy_values is not None:
             self._values = dummy_values
@@ -87,7 +87,7 @@ class TasmotaSmartPlug(BaseAuxComponent):
         Column prefix used in the CSV (e.g. 'wallbox').
     url : str
         Primary base URL, e.g. 'http://tasmota-158A57-2647' (mDNS hostname).
-    fallback_url : str | None
+    fallback_url : Optional[str]
         Static-IP URL tried when the primary URL fails at the network level,
         e.g. 'http://192.168.1.185'. Useful on hosts without mDNS support.
     power_scale : float
@@ -103,7 +103,7 @@ class TasmotaSmartPlug(BaseAuxComponent):
     ]
 
     def __init__(self, short_name: str, url: str,
-                 fallback_url: str | None = None,
+                 fallback_url: Optional[str] = None,
                  power_scale: float = 1.0, timeout: float = 3.0):
         super().__init__(short_name)
         self.url = url.rstrip('/')

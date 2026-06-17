@@ -14,7 +14,6 @@ import pytz
 import json
 import yaml
 from csv import DictWriter, DictReader
-from pydbus import SystemBus
 from utils import File_Logger, str2datetime, datetime2str
 from datetime import datetime, timedelta
 
@@ -357,6 +356,7 @@ def update_loop(debug=False):
         from pydbus import SessionBus
         bus = SessionBus()
     else:
+        from pydbus import SystemBus
         bus = SystemBus()
 
     psystem = power_system.init_power_system(system_components = config.system_components,

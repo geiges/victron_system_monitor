@@ -30,8 +30,8 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "agg")
 LOG_15 = "log_26-03-15.csv"
 LOG_16 = "log_26-03-16.csv"
 
-ENERGY_DC   = 1120 / 3_600_000   # kWh – DC load (mppt100)
-ENERGY_AC   = 2000 / 3_600_000   # kWh – AC output (multiplus)
+ENERGY_DC   = round(1120 / 3_600_000, config.round_digits)   # kWh – DC load (mppt100)
+ENERGY_AC   = round(2000 / 3_600_000, config.round_digits)   # kWh – AC output (multiplus)
 SOLAR_15    = round(0.04, config.round_digits)   # both chargers combined
 
 

@@ -33,5 +33,9 @@ tmux new-window -t "$SESSION" -n "api" \
 tmux new-window -t "$SESSION" -n "aux_logger" \
     "cd '$PROJECT_DIR' && uv run aux_logger.py; read -p 'Press enter to close'"
 
-echo "Started tmux session '$SESSION' with windows: logger, api, aux_logger"
+# Add the battery control runner in a fourth window
+tmux new-window -t "$SESSION" -n "control" \
+    "cd '$PROJECT_DIR' && uv run control_runner.py; read -p 'Press enter to close'"
+
+echo "Started tmux session '$SESSION' with windows: logger, api, aux_logger, control"
 echo "  Attach with: tmux attach -t $SESSION"

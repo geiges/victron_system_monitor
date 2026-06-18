@@ -3,16 +3,18 @@ import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from config_default import batt_config_V1 as _batt
+
 
 @dataclass
 class BatteryConfig:
-    capacity_ah: float = 210.0
-    r0: float = 0.01
-    r1: float = 0.04
-    c1: float = 2000.0
-    ncells: int = 8
-    charge_efficiency: float = 1.0
-    min_soc: float = 0.20
+    capacity_ah: float = _batt["Q_tot"]
+    r0: float = _batt["R0"]
+    r1: float = _batt["R1"]
+    c1: float = _batt["C1"]
+    ncells: int = _batt["ncells"]
+    charge_efficiency: float = _batt["charge_efficiency"]
+    min_soc: float = _batt.get("low_battery_SOC", 0.20)
     min_voltage: float = 24.5
     max_temp: float = 45.0
 
@@ -119,8 +121,8 @@ class ActuatorsConfig:
 class ControlConfig:
     safety_interval_seconds: int = 60
     control_interval_seconds: int = 300
-    horizon_hours: int = 24
-    estimated_load_w: float = 200.0
+    horizon_hours: int = 48
+    estimated_load_w: float = 20.0
     battery: BatteryConfig = field(default_factory=BatteryConfig)
     forecast: ForecastConfig = field(default_factory=ForecastConfig)
     agents: AgentsConfig = field(default_factory=AgentsConfig)

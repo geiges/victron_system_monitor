@@ -6,6 +6,25 @@ from control.schedule import ScheduledAction
 from control.state import minutes_at_full_soc
 
 
+def _hours_to_full(projection, threshold: float) -> int | None:
+    """Return the first projected hour (1-based) where SOC reaches *threshold*, or None."""
+    for i, h in enumerate(projection.hours):
+        if h.projected_soc >= threshold:
+            return i + 1
+    return None
+
+
+def _time_to_threshold_h(soc: float, threshold: float, current_a: float, capacity_ah: float) -> float | None:
+    """Linear extrapolation of hours until SOC falls to *threshold*.
+
+    Mirrors simulation.py's time_to_low_battery: only valid while discharging
+    (current_a < -0.5 A) and when SOC is currently above *threshold*.
+    """
+    if current_a >= -0.5 or soc <= threshold:
+        return None
+    return (soc - threshold) * capacity_ah / (-current_a)
+
+
 class SocWallboxChargeAgent(BaseAgent):
     """Switch wallbox on when battery has been full for long enough; off when low.
 
@@ -24,7 +43,18 @@ class SocWallboxChargeAgent(BaseAgent):
         actcfg = config.actuators
         now = datetime.now()
 
-        metrics = {"soc": round(current.soc, 4)}
+        capacity_ah = config.battery.capacity_ah
+
+        # Time to drop to the off-threshold at the current discharge rate (linear extrapolation)
+        time_to_off_h = _time_to_threshold_h(
+            current.soc, agent_cfg.soc_off_threshold,
+            current.battery_current, capacity_ah,
+        )
+
+        metrics = {
+            "soc": round(current.soc, 4),
+            "time_to_off_threshold_h": round(time_to_off_h, 2) if time_to_off_h is not None else None,
+        }
 
         # Turn off immediately if SOC is too low
         if current.soc < agent_cfg.soc_off_threshold:
@@ -49,12 +79,19 @@ class SocWallboxChargeAgent(BaseAgent):
 
         # SOC above minimum but not yet at full threshold — no action in either direction
         if current.soc < agent_cfg.soc_on_threshold:
+            proj_h = _hours_to_full(projection, agent_cfg.soc_on_threshold)
+            metrics["proj_hours_to_full"] = proj_h
+
+            proj_part = f", projected full in ~{proj_h}h" if proj_h is not None else ", full not reached in forecast horizon"
+            off_part = f", time to off-threshold: {time_to_off_h:.1f}h" if time_to_off_h is not None else ""
+
             return AgentResult(
                 agent_name=self.name,
                 actions=[],
                 rationale=(
-                    f"SOC {current.soc:.1%} above minimum {agent_cfg.soc_off_threshold:.0%}, "
-                    f"below full threshold {agent_cfg.soc_on_threshold:.0%} — no action"
+                    f"SOC {current.soc:.1%} — above minimum {agent_cfg.soc_off_threshold:.0%}, "
+                    f"below full threshold {agent_cfg.soc_on_threshold:.0%}"
+                    f"{proj_part}{off_part}"
                 ),
                 metrics=metrics,
             )
@@ -92,12 +129,13 @@ class SocWallboxChargeAgent(BaseAgent):
                 metrics=metrics,
             )
 
+        minutes_remaining = agent_cfg.soc_on_minutes - minutes_full
         return AgentResult(
             agent_name=self.name,
             actions=[],
             rationale=(
                 f"SOC full for {minutes_full:.0f} min "
-                f"(need {agent_cfg.soc_on_minutes} min) — waiting"
+                f"(need {agent_cfg.soc_on_minutes} min, {minutes_remaining:.0f} min remaining) — waiting"
             ),
             metrics=metrics,
         )

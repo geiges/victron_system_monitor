@@ -7,10 +7,20 @@ class DecisionLog:
     def __init__(self, path: Path):
         self._path = path
 
-    def append(self, entry: dict) -> None:
+    def append(self, entry) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._path, "a") as f:
             f.write(json.dumps(entry) + "\n")
+
+    def append_agent_result(self, result, timestamp: str = None) -> None:
+        entry = {
+            "timestamp": timestamp or datetime.now().isoformat(timespec="seconds"),
+            "agent": result.agent_name,
+            "rationale": result.rationale,
+            "metrics": result.metrics,
+            "actions": [a.to_dict() for a in result.actions],
+        }
+        self.append(entry)
 
     def tail(self, n: int = 50) -> list:
         if not self._path.exists():

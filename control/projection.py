@@ -55,6 +55,7 @@ def _step_soc(battery: Battery, solar_w: float, load_w: float) -> float:
 class BatteryProjector:
     def __init__(self, config):
         self._config = config
+        print(config)
 
     def project(
         self,
@@ -84,6 +85,22 @@ class BatteryProjector:
             horizon_hours=cfg.horizon_hours,
             hours=hours,
         )
+    
+    def create_log_entry(self, projection: SystemProjection, log) -> None:
+        projected_socs = [h.projected_soc for h in projection.hours]
+        
+        key_metrics = {
+        "min_soc": min(projected_socs) if projected_socs else None,
+        "max_soc": max(projected_socs) if projected_socs else None,
+        "min_soc_hour": projected_socs.index(min(projected_socs)) + 1
+                        if projected_socs else None,
+        "max_soc_hour": projected_socs.index(max(projected_socs)) + 1
+                        if projected_socs else None
+                        }
+        
+        log.append(f"[projection] done (with base load: {self._config.estimated_load_w} W) :" + 
+                   f"min SOC={key_metrics['min_soc']:.1%} (in {key_metrics['min_soc_hour']}h), "+ 
+                   f"maxSOC={key_metrics['max_soc']:.1%} (in {key_metrics['max_soc_hour']}h)")
 
 
 def save_projection_csv(projection: SystemProjection, path: Path) -> None:

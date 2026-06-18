@@ -100,26 +100,32 @@ def run_loop(config: ControlConfig) -> None:
             continue
 
         forecast = forecast_provider.get()
-        projection = projector.project(state, forecast)
 
         run_planning = (
             (t_start - last_planning_t).total_seconds()
             >= config.control_interval_seconds
         )
 
+        if run_planning:
+            projection = projector.project(state, forecast)
+            projector.create_log_entry(projection, log)
+
         results = []
+        latest_results = {}
         for agent in agents:
-            if not agent.fast_cycle and not run_planning:
-                continue
             if not agent.is_enabled(config):
                 continue
-            try:
-                result = agent.run(projection, config)
-                results.append(result)
-                print(f"[{result.agent_name}] {result.rationale}")
-            except Exception as exc:
-                print(f"[runner] agent {agent.name} raised: {exc}")
 
+            if agent.fast_cycle or run_planning:
+                try:
+                    result = agent.run(projection, config)
+                    results.append(result)
+                    latest_results[agent.name] = result
+                    print(f"[{result.agent_name}] {result.rationale}")
+                    log.append_agent_result(result)
+                except Exception as exc:
+                    print(f"[runner] agent {agent.name} raised: {exc}")
+            
         if run_planning:
             last_planning_t = t_start
             save_projection_csv(projection, PROJECTION_PATH)
@@ -131,7 +137,7 @@ def run_loop(config: ControlConfig) -> None:
             execute_action(action, config.actuators)
 
         entry = build_log_entry(state, forecast, projection, results, schedule)
-        log.append(entry)
+        # log.append(entry)
 
         proj = entry["projection"]
         print(f"[runner] cycle done — SOC={state.soc:.1%}, without load"

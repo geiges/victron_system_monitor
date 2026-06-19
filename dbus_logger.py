@@ -13,6 +13,7 @@ import csv
 import pytz
 import json
 import yaml
+import numpy as np
 from csv import DictWriter, DictReader
 from utils import File_Logger, str2datetime, datetime2str
 from datetime import datetime, timedelta
@@ -31,9 +32,18 @@ class AggregationLogger():
                  output_dir='data/aggregations/'):
 
         self.module_config = config
+        
+        self.vars_to_sum = ['DC_load_power', 'AC_power_output']
+        self.vars_max    = ['system/battery_temperature', "system/battery_voltage"]
+        self.vars_min    = ["system/battery_voltage"]
 
         self.cfg = dict(
-            fieldnames=['date', 'DC_load_power', 'AC_power_output', 'solar_total'],
+            fieldnames=(
+                ['date', 'solar_total']
+                + self.vars_to_sum
+                + [f"max_{v}" for v in self.vars_max]
+                + [f"min_{v}" for v in self.vars_min]
+            ),
             output_dir=output_dir,
             input_dir=input_dir)
 
@@ -69,13 +79,16 @@ class AggregationLogger():
         filepath = os.path.join(self.cfg['input_dir'], file)
         assert os.path.exists(filepath)
         
-        vars_to_sum = ['DC_load_power', 'AC_power_output']
+        
         
         aggregates = dict(
             date = date_str,
             )
         
-        aggregates.update({x:0 for x in vars_to_sum})
+        aggregates.update({x: 0 for x in self.vars_to_sum})
+        aggregates.update({f"max_{x}": -np.inf for x in self.vars_max})
+        aggregates.update({f"min_{x}":  np.inf for x in self.vars_min})
+        
         with open(filepath, mode="r") as fid:
             reader = DictReader(fid)
             first = next(reader)
@@ -97,15 +110,20 @@ class AggregationLogger():
                 for calc_var, calc_components in sum_dict.items():
                     row[calc_var] = float(row[calc_components[0]]) * float(row[calc_components[1]])
                 delta = (datetime.strptime(row['time'], config.time_format) - datetime.strptime(last['time'], config.time_format)).total_seconds()
-                for var in vars_to_sum:
+                for var in self.vars_to_sum:
                     
                     aggregates[var] += sum([float(row[x]) for x in row.keys() if (x.endswith(var) and row.get(x,0) is not None)]) * delta
-                    
+                
+                for var in self.vars_max:
+                    aggregates[f"max_{var}"] = max(aggregates[f"max_{var}"], float(row[var]))
+                for var in self.vars_min:
+                    aggregates[f"min_{var}"] = min(aggregates[f"min_{var}"], float(row[var]))
+                 
                 last = row.copy()
               
             
             
-            for var in vars_to_sum:
+            for var in self.vars_to_sum:
                 aggregates[var] = aggregates[var] / 3600 / 1000 # Ws to kWh
                 aggregates[var] = round( aggregates[var], config.round_digits)
             solar_total = 0

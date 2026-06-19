@@ -52,7 +52,7 @@ class SocWallboxChargeAgent(BaseAgent):
         )
 
         metrics = {
-            "soc": round(current.soc, 4),
+            "soc": round(current.soc, 2)*100,
             "time_to_off_threshold_h": round(time_to_off_h, 2) if time_to_off_h is not None else None,
         }
 

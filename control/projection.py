@@ -39,6 +39,15 @@ def _make_battery(cfg) -> Battery:
     )
 
 
+def _ceil_to_quarter(t: datetime) -> datetime:
+    """Return the first 15-minute wall-clock boundary at or after t."""
+    t_min = t.replace(second=0, microsecond=0)
+    remainder = t_min.minute % 15
+    if remainder == 0:
+        return t_min
+    return t_min + timedelta(minutes=(15 - remainder))
+
+
 def _step_soc(battery: Battery, solar_w: float, load_w: float, dt_seconds: float) -> float:
     """Advance battery SOC by dt_seconds given net power flows.
 
@@ -69,10 +78,11 @@ class BatteryProjector:
 
         dt_seconds = STEP_MINUTES * 60
         n_steps = cfg.horizon_hours * (60 // STEP_MINUTES)
+        t_first = _ceil_to_quarter(current.timestamp)
 
         steps = []
         for i in range(n_steps):
-            t = current.timestamp + timedelta(minutes=(i + 1) * STEP_MINUTES)
+            t = t_first + timedelta(minutes=i * STEP_MINUTES)
             solar_w = forecast.get_power(t) if forecast is not None else 0.0
             load_w = cfg.estimated_load_w
             soc = _step_soc(battery, solar_w, load_w, dt_seconds)

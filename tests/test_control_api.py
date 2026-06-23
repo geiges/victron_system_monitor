@@ -28,7 +28,7 @@ def test_get_config_returns_defaults(client):
     data = resp.get_json()
     assert data["control_interval_seconds"] == 300
     assert data["safety_interval_seconds"] == 60
-    assert data["battery"]["min_soc"] == pytest.approx(0.15)
+    assert data["battery"]["min_soc"] == pytest.approx(0.20)
 
 
 def test_get_config_creates_yaml_file(client, tmp_path):
@@ -131,3 +131,75 @@ def test_get_log_default_n_is_50(client, tmp_path):
 def test_get_log_invalid_n_returns_400(client):
     resp = client.get("/control/log?n=abc")
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# PUT /control/config — safety agent two-step disable guard
+# ---------------------------------------------------------------------------
+
+def test_put_config_disabling_safety_without_confirmed_disable_is_rejected(client):
+    resp = client.put("/control/config", json={
+        "agents": {"system_safety": {"enabled": False}}
+    })
+    assert resp.status_code == 400
+    assert "confirmed_disable" in resp.get_json()["error"]
+
+
+def test_put_config_disabling_safety_with_confirmed_disable_succeeds(client):
+    resp = client.put("/control/config", json={
+        "agents": {"system_safety": {"enabled": False, "confirmed_disable": True}}
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["agents"]["system_safety"]["enabled"] is False
+    assert data["agents"]["system_safety"]["confirmed_disable"] is True
+
+
+def test_put_config_enabling_safety_requires_no_confirmation(client):
+    resp = client.put("/control/config", json={
+        "agents": {"system_safety": {"enabled": True}}
+    })
+    assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# PUT /control/config — wallbox agent group mutual exclusion
+# ---------------------------------------------------------------------------
+
+def test_put_config_enabling_forecast_wallbox_disables_soc_wallbox(client):
+    resp = client.put("/control/config", json={
+        "agents": {"forecast_wallbox": {"enabled": True}}
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["agents"]["forecast_wallbox"]["enabled"] is True
+    assert data["agents"]["soc_wallbox_charge"]["enabled"] is False
+
+
+def test_put_config_enabling_soc_wallbox_disables_forecast_wallbox(client):
+    # First enable forecast_wallbox
+    client.put("/control/config", json={
+        "agents": {"forecast_wallbox": {"enabled": True}}
+    })
+    # Then switch to soc_wallbox_charge
+    resp = client.put("/control/config", json={
+        "agents": {"soc_wallbox_charge": {"enabled": True}}
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["agents"]["soc_wallbox_charge"]["enabled"] is True
+    assert data["agents"]["forecast_wallbox"]["enabled"] is False
+
+
+def test_put_config_non_wallbox_update_does_not_touch_group(client):
+    # Set a known wallbox state first
+    client.put("/control/config", json={
+        "agents": {"forecast_wallbox": {"enabled": True}}
+    })
+    # Update an unrelated field
+    resp = client.put("/control/config", json={"estimated_load_w": 123.0})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    # Group state unchanged from previous request
+    assert data["agents"]["forecast_wallbox"]["enabled"] is True
+    assert data["agents"]["soc_wallbox_charge"]["enabled"] is False

@@ -9,7 +9,7 @@ from control.schedule import Schedule, ScheduledAction
 from control.agents.base import AgentResult
 from control.state import CurrentState
 from control.forecast import SolarForecast, HourlyEntry
-from control.projection import SystemProjection, ProjectedHour
+from control.projection import SystemProjection, ProjectedStep
 
 
 _NOW = datetime(2026, 6, 17, 20, 0, 0)
@@ -29,8 +29,8 @@ def _make_state():
 
 def _make_projection(soc_values):
     state = _make_state()
-    hours = [
-        ProjectedHour(
+    steps = [
+        ProjectedStep(
             time=_NOW + timedelta(hours=i + 1),
             solar_w=0.0,
             estimated_load_w=200.0,
@@ -39,7 +39,7 @@ def _make_projection(soc_values):
         for i, soc in enumerate(soc_values)
     ]
     return SystemProjection(
-        current=state, forecast=None, horizon_hours=len(hours), hours=hours
+        current=state, forecast=None, horizon_hours=len(steps), steps=steps
     )
 
 
@@ -95,7 +95,7 @@ def test_build_log_entry_structure(tmp_path):
     assert entry["forecast_available"] is False
     assert entry["projection"]["soc_at_end"] == pytest.approx(0.30)
     assert entry["projection"]["min_soc"] == pytest.approx(0.30)
-    assert entry["projection"]["min_soc_hour"] == 5
+    assert entry["projection"]["min_soc_hour"] == pytest.approx(5.0)
     assert len(entry["agents"]) == 1
     assert entry["agents"][0]["agent"] == "system_safety"
 

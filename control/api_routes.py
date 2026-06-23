@@ -40,6 +40,16 @@ def put_config():
     if not isinstance(body, dict):
         return jsonify({"error": "JSON object required"}), 400
 
+    # Guard: disabling system_safety requires an explicit confirmed_disable flag
+    safety_update = body.get("agents", {}).get("system_safety", {})
+    if safety_update.get("enabled") is False and not safety_update.get("confirmed_disable"):
+        return jsonify({
+            "error": (
+                "Disabling system_safety requires confirmed_disable: true "
+                "in the same request."
+            )
+        }), 400
+
     cfg_path = _data_dir() / "control_config.yaml"
     if cfg_path.exists():
         with open(cfg_path) as f:
@@ -48,6 +58,16 @@ def put_config():
         current = dataclasses.asdict(ControlConfig())
 
     _deep_update(current, body)
+
+    # Enforce wallbox agent group: enabling one disables all others in the same group
+    agents_update = body.get("agents", {})
+    for group in _AGENT_GROUPS:
+        for name in group:
+            if agents_update.get(name, {}).get("enabled") is True:
+                for other in group:
+                    if other != name:
+                        current.setdefault("agents", {}).setdefault(other, {})["enabled"] = False
+                break  # only one winner per group per request
 
     try:
         updated = ControlConfig.from_dict(current)
@@ -84,7 +104,12 @@ def get_log():
     return jsonify(entries)
 
 
-_KNOWN_AGENTS = ["system_safety", "soc_wallbox_charge", "time_based", "forecast_aware"]
+# Agents that are mutually exclusive: enabling one disables the others in the same group.
+_AGENT_GROUPS: list[list[str]] = [
+    ["soc_wallbox_charge", "forecast_wallbox"],
+]
+
+_KNOWN_AGENTS = ["system_safety", "time_based", "soc_wallbox_charge", "forecast_wallbox"]
 
 
 @control_bp.get("/agents")

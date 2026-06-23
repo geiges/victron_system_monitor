@@ -8,6 +8,10 @@ class SystemSafetyAgent(BaseAgent):
     name = "system_safety"
     fast_cycle = True
 
+    def is_enabled(self, config) -> bool:
+        cfg = config.agents.system_safety
+        return not (not cfg.enabled and cfg.confirmed_disable)
+
     def run(self, projection, config) -> AgentResult:
         current = projection.current
         bcfg = config.battery

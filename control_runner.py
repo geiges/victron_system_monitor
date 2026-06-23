@@ -33,13 +33,13 @@ def _load_agents():
     """Import and instantiate all agent classes."""
     from control.agents.system_safety import SystemSafetyAgent
     from control.agents.time_based import TimeBasedAgent
-    from control.agents.forecast_aware import ForecastAwareAgent
     from control.agents.soc_wallbox_charge import SocWallboxChargeAgent
+    from control.agents.forecast_wallbox import ForecastWallboxAgent
     return [
         SystemSafetyAgent(),
         SocWallboxChargeAgent(DATA_DIR),
         TimeBasedAgent(),
-        ForecastAwareAgent(),
+        ForecastWallboxAgent(),
     ]
 
 

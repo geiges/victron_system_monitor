@@ -44,10 +44,14 @@ class ForecastConfig:
 @dataclass
 class SystemSafetyConfig:
     enabled: bool = True
+    confirmed_disable: bool = False  # both flags required to actually disable
 
     @classmethod
     def from_dict(cls, d: dict) -> "SystemSafetyConfig":
-        return cls(enabled=bool(d.get("enabled", True)))
+        return cls(
+            enabled=bool(d.get("enabled", True)),
+            confirmed_disable=bool(d.get("confirmed_disable", False)),
+        )
 
 
 @dataclass
@@ -63,12 +67,19 @@ class TimeBasedConfig:
 
 
 @dataclass
-class ForecastAwareConfig:
+class ForecastWallboxConfig:
     enabled: bool = False
+    wallbox_power_w: float = 1600.0
+    max_periods_per_day: int = 2
+    inverter_efficiency: float = 0.93
+    min_period_minutes: int = 30
+    merge_gap_minutes: int = 30
+    min_solar_fraction: float = 0.5
 
     @classmethod
-    def from_dict(cls, d: dict) -> "ForecastAwareConfig":
-        return cls(enabled=bool(d.get("enabled", False)))
+    def from_dict(cls, d: dict) -> "ForecastWallboxConfig":
+        valid = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in d.items() if k in valid})
 
 
 @dataclass
@@ -88,16 +99,16 @@ class SocWallboxChargeConfig:
 class AgentsConfig:
     system_safety: SystemSafetyConfig = field(default_factory=SystemSafetyConfig)
     time_based: TimeBasedConfig = field(default_factory=TimeBasedConfig)
-    forecast_aware: ForecastAwareConfig = field(default_factory=ForecastAwareConfig)
     soc_wallbox_charge: SocWallboxChargeConfig = field(default_factory=SocWallboxChargeConfig)
+    forecast_wallbox: ForecastWallboxConfig = field(default_factory=ForecastWallboxConfig)
 
     @classmethod
     def from_dict(cls, d: dict) -> "AgentsConfig":
         return cls(
             system_safety=SystemSafetyConfig.from_dict(d.get("system_safety", {})),
             time_based=TimeBasedConfig.from_dict(d.get("time_based", {})),
-            forecast_aware=ForecastAwareConfig.from_dict(d.get("forecast_aware", {})),
             soc_wallbox_charge=SocWallboxChargeConfig.from_dict(d.get("soc_wallbox_charge", {})),
+            forecast_wallbox=ForecastWallboxConfig.from_dict(d.get("forecast_wallbox", {})),
         )
 
 

@@ -36,6 +36,26 @@ class SolarForecast:
                 return entry.total_w
         return 0.0
 
+    def get_power(self, t: datetime) -> float:
+        """Return interpolated total solar W at time t (linear between hourly entries)."""
+        if not self.entries:
+            return 0.0
+        before = None
+        after = None
+        for entry in self.entries:
+            if entry.time <= t:
+                before = entry
+            else:
+                after = entry
+                break
+        if before is None:
+            return after.total_w
+        if after is None:
+            return before.total_w
+        span = (after.time - before.time).total_seconds()
+        offset = (t - before.time).total_seconds()
+        return before.total_w + (offset / span) * (after.total_w - before.total_w)
+
 
 def _parse_csv(text: str) -> dict:
     """Parse a forecast CSV (columns: time, 0) into {datetime: float} dict."""

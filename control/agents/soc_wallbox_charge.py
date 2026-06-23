@@ -6,11 +6,12 @@ from control.schedule import ScheduledAction
 from control.state import minutes_at_full_soc
 
 
-def _hours_to_full(projection, threshold: float) -> int | None:
-    """Return the first projected hour (1-based) where SOC reaches *threshold*, or None."""
-    for i, h in enumerate(projection.hours):
-        if h.projected_soc >= threshold:
-            return i + 1
+def _hours_to_full(projection, threshold: float) -> float | None:
+    """Return fractional hours until SOC first reaches *threshold*, or None."""
+    t0 = projection.current.timestamp
+    for step in projection.steps:
+        if step.projected_soc >= threshold:
+            return (step.time - t0).total_seconds() / 3600
     return None
 
 
@@ -82,7 +83,7 @@ class SocWallboxChargeAgent(BaseAgent):
             proj_h = _hours_to_full(projection, agent_cfg.soc_on_threshold)
             metrics["proj_hours_to_full"] = proj_h
 
-            proj_part = f", projected full in ~{proj_h}h" if proj_h is not None else ", full not reached in forecast horizon"
+            proj_part = f", projected full in ~{proj_h:.1f}h" if proj_h is not None else ", full not reached in forecast horizon"
             off_part = f", time to off-threshold: {time_to_off_h:.1f}h" if time_to_off_h is not None else ""
 
             return AgentResult(

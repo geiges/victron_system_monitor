@@ -40,7 +40,26 @@ class DecisionLog:
 
 def build_log_entry(state, forecast, projection, results, schedule) -> dict:
     """Assemble a JSON-serializable dict from one control cycle."""
-    projected_socs = [h.projected_soc for h in projection.hours]
+    projected_socs = [s.projected_soc for s in projection.steps]
+    if projected_socs:
+        t0 = projection.current.timestamp
+        min_soc = min(projected_socs)
+        max_soc = max(projected_socs)
+        min_step = projection.steps[projected_socs.index(min_soc)]
+        max_step = projection.steps[projected_socs.index(max_soc)]
+        proj_summary = {
+            "soc_at_end": projected_socs[-1],
+            "min_soc": min_soc,
+            "max_soc": max_soc,
+            "min_soc_hour": round((min_step.time - t0).total_seconds() / 3600, 2),
+            "max_soc_hour": round((max_step.time - t0).total_seconds() / 3600, 2),
+        }
+    else:
+        proj_summary = {
+            "soc_at_end": None, "min_soc": None, "max_soc": None,
+            "min_soc_hour": None, "max_soc_hour": None,
+        }
+
     return {
         "timestamp": datetime.now().isoformat(),
         "current": {
@@ -55,13 +74,7 @@ def build_log_entry(state, forecast, projection, results, schedule) -> dict:
         "projection": {
             "horizon_hours": projection.horizon_hours,
             "soc_now": state.soc,
-            "soc_at_end": projected_socs[-1] if projected_socs else None,
-            "min_soc": min(projected_socs) if projected_socs else None,
-            "max_soc": max(projected_socs) if projected_socs else None,
-            "min_soc_hour": projected_socs.index(min(projected_socs)) + 1
-                            if projected_socs else None,
-            "max_soc_hour": projected_socs.index(max(projected_socs)) + 1
-                            if projected_socs else None,
+            **proj_summary,
         },
         "agents": [r.to_dict() for r in results],
         "schedule": [a.to_dict() for a in schedule.actions],

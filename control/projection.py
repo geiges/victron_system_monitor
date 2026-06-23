@@ -9,9 +9,11 @@ from battery import Battery
 from control.forecast import SolarForecast
 from control.state import CurrentState
 
+STEP_MINUTES = 15
+
 
 @dataclass
-class ProjectedHour:
+class ProjectedStep:
     time: datetime
     solar_w: float
     estimated_load_w: float
@@ -23,7 +25,7 @@ class SystemProjection:
     current: CurrentState
     forecast: Optional[SolarForecast]
     horizon_hours: int
-    hours: list  # list[ProjectedHour]
+    steps: list  # list[ProjectedStep]
 
 
 def _make_battery(cfg) -> Battery:
@@ -37,15 +39,14 @@ def _make_battery(cfg) -> Battery:
     )
 
 
-def _step_soc(battery: Battery, solar_w: float, load_w: float) -> float:
-    """Advance battery SOC by one hour given net power flows.
+def _step_soc(battery: Battery, solar_w: float, load_w: float, dt_seconds: float) -> float:
+    """Advance battery SOC by dt_seconds given net power flows.
 
-    Uses coulomb counting only (hourly resolution makes RC transient negligible).
     Sign convention: positive current = charging (matches Victron/simulation.py).
     """
     ocv = battery.OCV
     net_current = (solar_w - load_w) / ocv if ocv > 0 else 0.0
-    delta_as = net_current * 3600.0 * battery.charge_efficiency
+    delta_as = net_current * dt_seconds * battery.charge_efficiency
     battery.actual_capacity = max(
         0.0, min(battery.total_capacity, battery.actual_capacity + delta_as)
     )
@@ -66,13 +67,16 @@ class BatteryProjector:
         battery = _make_battery(cfg)
         battery.set_state_of_charge(current.soc)
 
-        hours = []
-        for h in range(cfg.horizon_hours):
-            t = current.timestamp + timedelta(hours=h + 1)
-            solar_w = forecast.get_hour(t) if forecast is not None else 0.0
+        dt_seconds = STEP_MINUTES * 60
+        n_steps = cfg.horizon_hours * (60 // STEP_MINUTES)
+
+        steps = []
+        for i in range(n_steps):
+            t = current.timestamp + timedelta(minutes=(i + 1) * STEP_MINUTES)
+            solar_w = forecast.get_power(t) if forecast is not None else 0.0
             load_w = cfg.estimated_load_w
-            soc = _step_soc(battery, solar_w, load_w)
-            hours.append(ProjectedHour(
+            soc = _step_soc(battery, solar_w, load_w, dt_seconds)
+            steps.append(ProjectedStep(
                 time=t,
                 solar_w=solar_w,
                 estimated_load_w=load_w,
@@ -83,36 +87,40 @@ class BatteryProjector:
             current=current,
             forecast=forecast,
             horizon_hours=cfg.horizon_hours,
-            hours=hours,
+            steps=steps,
         )
-    
+
     def create_log_entry(self, projection: SystemProjection, log) -> None:
-        projected_socs = [h.projected_soc for h in projection.hours]
-        
-        key_metrics = {
-        "min_soc": min(projected_socs) if projected_socs else None,
-        "max_soc": max(projected_socs) if projected_socs else None,
-        "min_soc_hour": projected_socs.index(min(projected_socs)) + 1
-                        if projected_socs else None,
-        "max_soc_hour": projected_socs.index(max(projected_socs)) + 1
-                        if projected_socs else None
-                        }
-        
-        log.append(f"[projection] done (with base load: {self._config.estimated_load_w} W) :" + 
-                   f"min SOC={key_metrics['min_soc']:.1%} (in {key_metrics['min_soc_hour']}h), "+ 
-                   f"maxSOC={key_metrics['max_soc']:.1%} (in {key_metrics['max_soc_hour']}h)")
+        projected_socs = [s.projected_soc for s in projection.steps]
+        if not projected_socs:
+            log.append("[projection] done — no steps")
+            return
+
+        t0 = projection.current.timestamp
+        min_soc = min(projected_socs)
+        max_soc = max(projected_socs)
+        min_step = projection.steps[projected_socs.index(min_soc)]
+        max_step = projection.steps[projected_socs.index(max_soc)]
+        min_h = (min_step.time - t0).total_seconds() / 3600
+        max_h = (max_step.time - t0).total_seconds() / 3600
+
+        log.append(
+            f"[projection] done (base load {self._config.estimated_load_w} W): "
+            f"min SOC={min_soc:.1%} (in {min_h:.2f}h), "
+            f"max SOC={max_soc:.1%} (in {max_h:.2f}h)"
+        )
 
 
 def save_projection_csv(projection: SystemProjection, path: Path) -> None:
-    """Write the projected hourly states to a CSV file (overwritten each cycle)."""
+    """Write the projected steps to a CSV file (overwritten each cycle)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["time", "solar_w", "estimated_load_w", "projected_soc"])
-        for h in projection.hours:
+        for s in projection.steps:
             writer.writerow([
-                h.time.strftime("%Y-%m-%d %H:%M"),
-                round(h.solar_w, 1),
-                round(h.estimated_load_w, 1),
-                round(h.projected_soc, 4),
+                s.time.strftime("%Y-%m-%d %H:%M"),
+                round(s.solar_w, 1),
+                round(s.estimated_load_w, 1),
+                round(s.projected_soc, 4),
             ])

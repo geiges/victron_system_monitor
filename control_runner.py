@@ -218,14 +218,16 @@ def _print_dry_run(config: ControlConfig) -> None:
     print("[battery projection]")
     projector = BatteryProjector(config)
     projection = projector.project(state, forecast)
-    print(f"  {'hour':>4}  {'time':>5}  {'solar_w':>8}  {'load_w':>7}  {'SOC':>6}")
-    print(f"  {'----':>4}  {'----':>5}  {'-------':>8}  {'------':>7}  {'---':>6}")
-    for i, h in enumerate(projection.hours):
-        print(f"  {i+1:>4}  "
-              f"{h.time.strftime('%H:%M'):>5}  "
-              f"{h.solar_w:>8.0f}  "
-              f"{h.estimated_load_w:>7.0f}  "
-              f"{h.projected_soc:>6.1%}")
+    t0 = projection.current.timestamp
+    print(f"  {'hours':>5}  {'time':>5}  {'solar_w':>8}  {'load_w':>7}  {'SOC':>6}")
+    print(f"  {'-----':>5}  {'----':>5}  {'-------':>8}  {'------':>7}  {'---':>6}")
+    for s in projection.steps:
+        hours_ahead = (s.time - t0).total_seconds() / 3600
+        print(f"  {hours_ahead:>5.2f}  "
+              f"{s.time.strftime('%H:%M'):>5}  "
+              f"{s.solar_w:>8.0f}  "
+              f"{s.estimated_load_w:>7.0f}  "
+              f"{s.projected_soc:>6.1%}")
 
 
 # ---------------------------------------------------------------------------

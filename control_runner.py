@@ -74,6 +74,7 @@ def _sleep_to_next_interval(t_start: datetime, interval_seconds: int) -> None:
 
 
 def run_loop(config: ControlConfig) -> None:
+    
     agents = _load_agents()
     forecast_provider = SolarForecastProvider(config.forecast)
     projector = BatteryProjector(config)
@@ -84,14 +85,21 @@ def run_loop(config: ControlConfig) -> None:
           f"horizon={config.horizon_hours}h")
 
     last_planning_t = datetime.min  # force planning agents to run on first cycle
+    projection = None
 
     while True:
         t_start = datetime.now()
 
         # Reload config each cycle so REST API edits take effect
-        config = ControlConfig.load_or_default(CONFIG_PATH)
-        projector = BatteryProjector(config)
-
+        try:
+            config = ControlConfig.load_or_default(CONFIG_PATH)
+            projector = BatteryProjector(config)
+        except Exception as e:
+            print(f"[runner] error loading config: {e} — skipping cycle")
+            _sleep_to_next_interval(t_start, config.safety_interval_seconds)
+            continue
+        
+        
         try:
             state = read_current_state(DATA_DIR)
         except StateUnavailableError as exc:
@@ -107,8 +115,16 @@ def run_loop(config: ControlConfig) -> None:
         )
 
         if run_planning:
-            projection = projector.project(state, forecast)
-            projector.create_log_entry(projection, log)
+            try:
+                projection = projector.project(state, forecast)
+                projector.create_log_entry(projection, log)
+            except Exception as e:
+                print(f"[runner] error in projection: {e}")
+
+        if projection is None:
+            print("[runner] no projection available yet — skipping agents")
+            _sleep_to_next_interval(t_start, config.safety_interval_seconds)
+            continue
 
         results = []
         latest_results = {}

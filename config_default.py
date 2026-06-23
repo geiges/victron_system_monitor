@@ -89,7 +89,11 @@ batt_config_V1 = {
     "Q_rc"  : 1e-6,     # process noise for RC voltage state
     "charge_efficiency" : 1.0,
     "version" : 'V1',
-    "low_battery_SOC" : 0.2
+    "low_battery_SOC" : 0.2,
+    "min_safety_voltage" : 24.3,
+    "max_safety_voltage" : 28.9,
+    "min_safety_temperature" : 5,
+    "max_safety_temperature" : 45,
 }
 
 import aux_components as aux_comp

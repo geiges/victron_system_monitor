@@ -14,9 +14,11 @@ class BatteryConfig:
     c1: float = _batt["C1"]
     ncells: int = _batt["ncells"]
     charge_efficiency: float = _batt["charge_efficiency"]
-    min_soc: float = _batt.get("low_battery_SOC", 0.20)
-    min_voltage: float = 24.5
-    max_temp: float = 45.0
+    min_soc: float = _batt["low_battery_SOC"]
+    min_voltage: float = _batt["min_safety_voltage"]
+    max_voltage: float = _batt["max_safety_voltage"]
+    min_temp: float = _batt["min_safety_temperature"]
+    max_temp: float = _batt["max_safety_temperature"]
 
     @classmethod
     def from_dict(cls, d: dict) -> "BatteryConfig":

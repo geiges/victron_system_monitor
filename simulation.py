@@ -37,7 +37,7 @@ class System_Simulation():
     default_init_SOC = .5
     default_init_RV  = 0.0
     
-    def __init__(self, sim_config):
+    def __init__(self, sim_config, debug=False):
 
 
         
@@ -198,8 +198,6 @@ class System_Simulation():
             # simulate SOC
             time_delta = (t_now - self.t_previous).total_seconds()
             
-            print(time_delta)
-            
             if time_delta is not None:
                 self.battery_simulation.update(-time_delta, sim_data[battery_current_var])
 
@@ -230,5 +228,6 @@ class System_Simulation():
         sim_data['SOC_Kf'] = estimated_SOC
         sim_data['SOC_counted'] = SOC_counted
         
-        print(f"SOC estimated: {estimated_SOC} / counted: {SOC_counted}")
+        
+        print(f"SOC estimated: {estimated_SOC} / counted: {SOC_counted}", end = ' - ' )
         return sim_data

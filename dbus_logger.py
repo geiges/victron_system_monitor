@@ -29,11 +29,13 @@ class AggregationLogger():
 
     def __init__(self, config,
                  input_dir='data',
-                 output_dir='data/aggregations/'):
+                 output_dir='data/aggregations/',
+                 overwrite_file = False):
 
         self.module_config = config
         
         self.vars_to_sum = ['DC_load_power', 'AC_power_output']
+        self.aux_vars_to_sum = ['wallbox/power_w', 'ac_inverter/power_w']
         self.vars_max    = ['system/battery_temperature', "system/battery_voltage"]
         self.vars_min    = ["system/battery_voltage"]
 
@@ -41,6 +43,7 @@ class AggregationLogger():
             fieldnames=(
                 ['date', 'solar_total']
                 + self.vars_to_sum
+                + self.aux_vars_to_sum
                 + [f"max_{v}" for v in self.vars_max]
                 + [f"min_{v}" for v in self.vars_min]
             ),
@@ -52,7 +55,7 @@ class AggregationLogger():
 
         os.makedirs(self.cfg['output_dir'], exist_ok=True)
 
-        if not os.path.exists(self.cfg["out_filepath"]):
+        if not os.path.exists(self.cfg["out_filepath"]) or overwrite_file:
             self._init_output_file()
 
         self.last_date_str = self._get_last_date_logged()
@@ -72,6 +75,44 @@ class AggregationLogger():
         
         last_date_str =  lastRow.split(',')[0]
         return last_date_str
+
+    def _compute_aux_aggregates(self, file):
+        path = pathlib.Path(file)
+        date_str = path.name.replace('aux_','').replace('.csv','')
+        filepath = os.path.join(self.cfg['input_dir'], file)
+        if not os.path.exists(filepath):
+            print(f"Aux file {filepath} not found")
+            return dict()
+        
+        aggregates = dict(
+            date = date_str,
+            )
+        
+        aggregates.update({x: 0 for x in self.aux_vars_to_sum})
+        
+        with open(filepath, mode="r") as fid:
+            reader = DictReader(fid)
+            first = next(reader)
+            last = first.copy()
+            
+            # variables that need to be summed up
+            for row in reader:
+                
+                delta = (datetime.strptime(row['time'], config.time_format) - datetime.strptime(last['time'], config.time_format)).total_seconds()
+                for var in self.aux_vars_to_sum:
+                    
+                    value = float(row[var]) * delta if row.get(var,'') != ''  else 0
+                    if value != '':
+                        aggregates[var] += value
+                last = row.copy()
+                
+            
+            for var in self.aux_vars_to_sum:
+                aggregates[var] = aggregates[var] / 3600 / 1000 # Ws to kWh
+                aggregates[var] = round( aggregates[var], config.round_digits)
+        print(aggregates)
+        return aggregates
+     
     
     def _compute_day_aggregates(self, file):
         path = pathlib.Path(file)
@@ -112,12 +153,14 @@ class AggregationLogger():
                 delta = (datetime.strptime(row['time'], config.time_format) - datetime.strptime(last['time'], config.time_format)).total_seconds()
                 for var in self.vars_to_sum:
                     
-                    aggregates[var] += sum([float(row[x]) for x in row.keys() if (x.endswith(var) and row.get(x,0) is not None)]) * delta
+                    aggregates[var] += sum([float(row[x]) for x in row.keys() if (x.endswith(var) and row.get(x,'') != '')]) * delta
                 
                 for var in self.vars_max:
-                    aggregates[f"max_{var}"] = max(aggregates[f"max_{var}"], float(row[var]))
+                    if var in row and row.get(var,'') != "":
+                        aggregates[f"max_{var}"] = max(aggregates[f"max_{var}"], float(row[var]))
                 for var in self.vars_min:
-                    aggregates[f"min_{var}"] = min(aggregates[f"min_{var}"], float(row[var]))
+                    if var in row and row.get(var,'') != "":
+                        aggregates[f"min_{var}"] = min(aggregates[f"min_{var}"], float(row[var]))
                  
                 last = row.copy()
               
@@ -147,8 +190,14 @@ class AggregationLogger():
             for file in files:
                 try:
                     data = self._compute_day_aggregates(file)
+                    aux_data = self._compute_aux_aggregates(file.replace('log_','aux_'))
+                    data.update(aux_data)
                     writer.writerow(data)
-                except:
+                    
+                    
+                except Exception as E:
+                    import traceback
+                    print(traceback.format_exc())
                     print(f"file {file} could not be aggregated")
                 
         
@@ -166,14 +215,32 @@ class AggregationLogger():
                 for date in date_list:
                     
                     try:
+                        # dbus_data 
                         filepath  = "log_{date_str}.csv".format(date_str=datetime2str(date))
                         data = self._compute_day_aggregates(filepath)
-                        print(f'Data aggregated for {date}')
-                    except:
-                        print(f'Error aggregating data for date:{date}')
+                        print(f'Log data aggregated for {date}')
+                    except :
+                        import traceback
+                        
+                        print(print(traceback.format_exc()))
+                        print(f'Error aggregating log data for date:{date}')
                         data = dict(
                             date = date,
                             )
+                        
+                    try:
+                        #aux data
+                        filepath  = "aux_{date_str}.csv".format(date_str=datetime2str(date))
+                        aux_data = self._compute_aux_aggregates(filepath)
+                        data.update(aux_data)
+                        print(f'Aux data aggregated for {date}')
+                    except:
+                        import traceback
+                        
+                        print(traceback.format_exc())
+                        
+                        print(f'Error aggregating aux data for date:{date}')
+                            
                     writer.writerow(data)
             
             self.last_date_str = date_str
@@ -410,13 +477,13 @@ def update_loop(debug=False):
     state['running_since'] = now.strftime("%y-%m-%d %H:%M")
 
     
-    daily_logger =AggregationLogger(config)
+    daily_logger = AggregationLogger(config)
     
     
     if simulate_system:
         import simulation
 
-        simulator = simulation.System_Simulation(config.batt_config_V1)
+        simulator = simulation.System_Simulation(config.batt_config_V1, debug)
         
         curr_output_file = sim_logger.get_output_file_path(t_now)
         if os.path.exists(curr_output_file):
@@ -448,7 +515,7 @@ def update_loop(debug=False):
 
         t_now = datetime.now(tz=timezone) # current date and time
         date_str =  t_now.strftime(config.date_format)
-
+        print(f'Timestep at {t_now.strftime(config.time_format)}', end =' - ')
         try:
             data = retrieve_data(bus, variables_to_log, debug)
             state_values = retrieve_states(bus, states_to_log, debug)
@@ -503,7 +570,8 @@ def update_loop(debug=False):
                     json.dump(state, fp)
         t_calc =  datetime.now(tz=timezone) - t_now
         
-        print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
+        if debug:
+            print(f"Timestep done in {(datetime.now(tz=timezone) - t_now).total_seconds():2.2f}s")
        
         time.sleep(max(0, config.log_interval - t_calc.total_seconds()))
         
@@ -514,10 +582,10 @@ def main(debug=False):
 
 
 if __name__ == '__main__':
-    main(debug=False)
-    # daily_logger =Logger_Daily_aggregates(config)
+    # main(debug=False)
+    daily_logger = AggregationLogger(config)
+# 
+    now = datetime.now(tz=timezone) # current date and time
+    date_str = now.strftime(config.date_format)
 
-    # now = datetime.now(tz=timezone) # current date and time
-    # date_str = now.strftime(config.date_format)
-
-    # daily_logger.update_daily_aggregates(date_str)
+    daily_logger.update_daily_aggregates(date_str)

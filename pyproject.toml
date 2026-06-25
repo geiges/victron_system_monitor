@@ -25,6 +25,7 @@ ecowhen-data-api = { path = "../ecowhen_data_api" }
 
 [dependency-groups]
 dev = [
+    "matplotlib>=3.11.0",
     "pytest>=9.0.2",
 ]
 [tool.pytest.ini_options]

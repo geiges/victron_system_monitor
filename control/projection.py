@@ -16,8 +16,9 @@ STEP_MINUTES = 15
 class ProjectedStep:
     time: datetime
     solar_w: float
-    estimated_load_w: float
+    estimated_load_w: float   # base load only (cfg.estimated_load_w)
     projected_soc: float
+    extra_load_w: float = 0.0  # additional load from scheduled actions (e.g. wallbox)
 
 
 @dataclass
@@ -71,7 +72,14 @@ class BatteryProjector:
         self,
         current: CurrentState,
         forecast: Optional[SolarForecast],
+        extra_load_fn=None,  # Optional[Callable[[datetime], float]]
     ) -> SystemProjection:
+        """Project battery SOC forward.
+
+        extra_load_fn, if provided, is called with each step's timestamp and
+        returns additional DC-side watts to add to the base estimated load
+        (e.g. wallbox draw derived from a scheduled action timeline).
+        """
         cfg = self._config
         battery = _make_battery(cfg)
         battery.set_state_of_charge(current.soc)
@@ -84,12 +92,14 @@ class BatteryProjector:
         for i in range(n_steps):
             t = t_first + timedelta(minutes=i * STEP_MINUTES)
             solar_w = forecast.get_power(t) if forecast is not None else 0.0
-            load_w = cfg.estimated_load_w
+            extra_w = extra_load_fn(t) if extra_load_fn is not None else 0.0
+            load_w = cfg.estimated_load_w + extra_w
             soc = _step_soc(battery, solar_w, load_w, dt_seconds)
             steps.append(ProjectedStep(
                 time=t,
                 solar_w=solar_w,
-                estimated_load_w=load_w,
+                estimated_load_w=cfg.estimated_load_w,
+                extra_load_w=extra_w,
                 projected_soc=soc,
             ))
 
@@ -126,11 +136,12 @@ def save_projection_csv(projection: SystemProjection, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["time", "solar_w", "estimated_load_w", "projected_soc"])
+        writer.writerow(["time", "solar_w", "estimated_load_w", "extra_load_w", "projected_soc"])
         for s in projection.steps:
             writer.writerow([
                 s.time.strftime("%Y-%m-%d %H:%M"),
                 round(s.solar_w, 1),
                 round(s.estimated_load_w, 1),
+                round(s.extra_load_w, 1),
                 round(s.projected_soc, 4),
             ])

@@ -18,17 +18,16 @@ def str2datetime(date_str):
 
 class File_Logger():
     
-    def __init__(self, file_path_structure, config):
-
+    def __init__(self, file_path_structure, config, debug = False):
         self.config = config
         self.file_path_structure = file_path_structure
         self.old_data = None
         self.cached_data = None
         self.old_date_str = 'NaT'
         self.timezone = pytz.timezone(config.tz)
-
+        self.debug = debug
         self.initialized = False
-
+        
     def get_output_file_path(self, t_now):
         date_str =  t_now.strftime(self.config.date_format)
         log_filepath = self.file_path_structure.format(date_str=date_str)
@@ -83,7 +82,9 @@ class File_Logger():
                 self.fieldnames = fieldnames
             else:
                 self.fieldnames = columns
-            print(f".done in {time.time() - tt:2.2f}s")
+                
+            if self.debug:
+                print(f".done in {time.time() - tt:2.2f}s")
 
             self.old_date_str =  date_str
             self.initialized = True
@@ -93,7 +94,8 @@ class File_Logger():
         with open(filename, mode="a") as fid:
             writer = DictWriter(fid, fieldnames)
     
-            print(f"Writing head for new file {filename}")
+            if self.debug:
+                print(f"Writing head for new file {filename}")
             writer.writeheader()
     
     def _write_data(self, filename, row_data, is_new_day):
@@ -136,7 +138,8 @@ class File_Logger():
                 print("Data changed in timestep {now_str} - writing out cached data for {cached_data['meas'][data']['time']")
                 self._write_data(**self.cached_data)
                 
-            print(f"Writing data for  {row_data['time']}")    
+            if self.debug:
+                print(f"Writing data for  {row_data['time']}")    
             
             self._write_data(filepath, row_data, is_new_day)
            

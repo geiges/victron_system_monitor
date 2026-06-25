@@ -582,10 +582,10 @@ def main(debug=False):
 
 
 if __name__ == '__main__':
-    # main(debug=False)
-    daily_logger = AggregationLogger(config)
-# 
-    now = datetime.now(tz=timezone) # current date and time
-    date_str = now.strftime(config.date_format)
+    main(debug=False)
+#     daily_logger = AggregationLogger(config)
+# # 
+#     now = datetime.now(tz=timezone) # current date and time
+#     date_str = now.strftime(config.date_format)
 
-    daily_logger.update_daily_aggregates(date_str)
+#     daily_logger.update_daily_aggregates(date_str)

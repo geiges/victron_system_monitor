@@ -233,14 +233,21 @@ class AggregationLogger():
                         filepath  = "aux_{date_str}.csv".format(date_str=datetime2str(date))
                         aux_data = self._compute_aux_aggregates(filepath)
                         data.update(aux_data)
+                        
+                        # adding additional solar_yield form ax inverter (from aux_log)
+                        if 'ac_inverter/power_w' in aux_data:
+                            print('adding addition ac solar yield')
+                            data['solar_total'] += aux_data['ac_inverter/power_w']
+                            
                         print(f'Aux data aggregated for {date}')
                     except:
                         import traceback
                         
+                        
                         print(traceback.format_exc())
                         
                         print(f'Error aggregating aux data for date:{date}')
-                            
+                    print(data)
                     writer.writerow(data)
             
             self.last_date_str = date_str
@@ -582,10 +589,10 @@ def main(debug=False):
 
 
 if __name__ == '__main__':
-    main(debug=False)
-#     daily_logger = AggregationLogger(config)
+    # main(debug=False)
+    daily_logger = AggregationLogger(config)
 # # 
-#     now = datetime.now(tz=timezone) # current date and time
-#     date_str = now.strftime(config.date_format)
+    now = datetime.now(tz=timezone) # current date and time
+    date_str = now.strftime(config.date_format)
 
-#     daily_logger.update_daily_aggregates(date_str)
+    daily_logger.update_daily_aggregates(date_str)

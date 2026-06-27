@@ -4,6 +4,7 @@ D-Bus service addresses (ttyUSB numbers) are looked up at runtime from
 data/system_configuration.yaml, which the D-Bus logger writes on startup.
 Tasmota URLs come directly from ActuatorsConfig.
 """
+import os
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -18,7 +19,14 @@ from control.config import ActuatorsConfig
 # D-Bus actuators: name → (component name in system_config, D-Bus path)
 _DBUS_SPECS = {
     "multiplus_mode": ("multiplus", "/Mode"),
-    "mppt100_load":   ("mppt100",   "/Load/State"),
+    # mppt100_load: dbus /Load/State is read-only on this model (used by dbus_logger
+    # for monitoring); writes go through VE.Direct HEX via _LOCAL_API_SPECS below.
+}
+
+# Local ecowhen_data_api actuators: name → config attribute holding the endpoint URL.
+# Auth key is read from ECOWHEN_DATA_API_KEY at call time (same env var the API uses).
+_LOCAL_API_SPECS = {
+    "mppt100_load": "mppt100_load_api_url",
 }
 
 # Tasmota actuators: name → (primary URL attr, fallback URL attr)
@@ -97,6 +105,28 @@ def _execute_tasmota_action(action: ScheduledAction, config: ActuatorsConfig) ->
     return False
 
 
+def _execute_local_api_action(action: ScheduledAction, config: ActuatorsConfig) -> bool:
+    url_attr = _LOCAL_API_SPECS[action.actuator]
+    url = getattr(config, url_attr, "")
+    if not url:
+        print(f"[actuator] no URL configured for {action.actuator!r}")
+        return False
+    api_key = os.environ.get("ECOWHEN_DATA_API_KEY", "")
+    try:
+        resp = requests.post(
+            url,
+            json={"value": action.value},
+            headers={"X-API-Key": api_key},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        print(f"[actuator] {action.actuator}={action.value} → {url} OK")
+        return True
+    except Exception as exc:
+        print(f"[actuator] {action.actuator}={action.value} ERROR: {exc}")
+        return False
+
+
 def execute_action(
     action: ScheduledAction,
     config: ActuatorsConfig,
@@ -107,5 +137,7 @@ def execute_action(
         return _execute_tasmota_action(action, config)
     if action.actuator in _DBUS_SPECS:
         return _execute_dbus_action(action, config, system_config_path)
+    if action.actuator in _LOCAL_API_SPECS:
+        return _execute_local_api_action(action, config)
     print(f"[actuator] unknown actuator: {action.actuator!r}")
     return False

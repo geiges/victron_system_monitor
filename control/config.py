@@ -120,6 +120,7 @@ class ActuatorsConfig:
     mppt100_load: bool = True
     mppt100_load_on: int = 1
     mppt100_load_off: int = 0
+    mppt100_load_api_url: str = "http://localhost:5100/command/mppt100_load_control"
     wallbox_charge: bool = True
     wallbox_tasmota_url: str = "http://tasmota-158A57-2647"
     wallbox_tasmota_fallback_url: str = "http://192.168.1.185"

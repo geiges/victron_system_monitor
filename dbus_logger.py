@@ -345,12 +345,15 @@ def save_system_configuration(psystem, bus,
 
         set_commands = []
         for vs in getattr(component, 'vedirect_sets', []):
-            set_commands.append({
+            entry = {
                 'basename': vs.basename,
                 'register': vs.register,
                 'allowed_values': list(vs.allowed_values),
                 'set_command_id': f"{short_name}_{vs.basename}",
-            })
+            }
+            if vs.readable:
+                entry['get_command_id'] = f"{short_name}_{vs.basename}_read"
+            set_commands.append(entry)
 
         components[short_name] = {
             'product_name': component.product_name,
@@ -399,6 +402,14 @@ def _regenerate_api_config_commands(components: dict, api_config_path: str = 'ap
                 'values': tc['values'],
             })
         for sc in comp.get('set_commands', []):
+            if 'get_command_id' in sc:
+                cmd_eps.append({
+                    'id': sc['get_command_id'],
+                    'type': 'vedirect_get',
+                    'description': f"Read {short_name} {sc['basename']} via VE.Direct HEX",
+                    'component': short_name,
+                    'register': sc['register'],
+                })
             cmd_eps.append({
                 'id': sc['set_command_id'],
                 'type': 'vedirect_set',

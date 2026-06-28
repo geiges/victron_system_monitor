@@ -22,6 +22,7 @@ class VeDirectSetType(NamedTuple):
     basename: str
     register: int               # VE.Direct HEX register address, e.g. 0xEDAB
     allowed_values: list = []   # empty = any value accepted
+    readable: bool = True       # also emit a vedirect_get read command
 
 class BaseComponent(object):
     """

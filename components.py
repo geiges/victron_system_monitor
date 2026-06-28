@@ -18,11 +18,17 @@ class StateType(NamedTuple):
     mapping: dict
     toggle_values: list = []
 
+class VeDirectSetType(NamedTuple):
+    basename: str
+    register: int               # VE.Direct HEX register address, e.g. 0xEDAB
+    allowed_values: list = []   # empty = any value accepted
+
 class BaseComponent(object):
     """
     Base class for system components to provide some common functions
     """
     component_states = []
+    vedirect_sets = []
     
     def __init__(self, 
                  product_name, 
@@ -226,7 +232,7 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
     """
     component_variables =[
         VariableType(basename = "power_yield", subaddress = "/Yield/Power", unit='W'),
-        VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'), 
+        VariableType(basename = "DC_0_voltage", subaddress = "/Dc/0/Voltage", unit='V'),
         VariableType(basename = "DC_0_current", subaddress = "/Dc/0/Current", unit='A'),
         VariableType(basename = "DC_load_current", subaddress = "/Load/I", unit='A'),
         VariableType(basename = "total_yield", subaddress = "/Yield/System", unit='kWh'),
@@ -236,6 +242,9 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
         StateType(basename = 'mppt_mode', subaddress='/Mode', mapping= {0: "ideal", 1: "working", 4: "off"}, toggle_values =[1,4]),
         StateType(basename = 'load_state', subaddress='/Load/State', mapping= {0: "off", 1: "on"})
         ]
+    vedirect_sets = [
+        VeDirectSetType(basename='load_control', register=0xEDAB, allowed_values=[0, 1, 4, 5]),
+    ]
     
     def __init__(self, product_name, short_name, const_consumption=0.0, connected_PV=None):
          

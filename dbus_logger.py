@@ -343,11 +343,21 @@ def save_system_configuration(psystem, bus,
                 'toggle_command_id': _toggle_command_id(short_name, state.basename, 'toggle'),
             })
 
+        set_commands = []
+        for vs in getattr(component, 'vedirect_sets', []):
+            set_commands.append({
+                'basename': vs.basename,
+                'register': vs.register,
+                'allowed_values': list(vs.allowed_values),
+                'set_command_id': f"{short_name}_{vs.basename}",
+            })
+
         components[short_name] = {
             'product_name': component.product_name,
             'service': service,
             'available': service is not None,
             'toggle_commands': toggle_commands,
+            'set_commands': set_commands,
         }
 
     with open(sys_config_path, 'w') as f:
@@ -387,6 +397,15 @@ def _regenerate_api_config_commands(components: dict, api_config_path: str = 'ap
                 'service': service,
                 'path': tc['path'],
                 'values': tc['values'],
+            })
+        for sc in comp.get('set_commands', []):
+            cmd_eps.append({
+                'id': sc['set_command_id'],
+                'type': 'vedirect_set',
+                'description': f"Set {short_name} {sc['basename']} via VE.Direct HEX",
+                'component': short_name,
+                'register': sc['register'],
+                'allowed_values': sc['allowed_values'],
             })
 
     config['command_endpoints'] = cmd_eps

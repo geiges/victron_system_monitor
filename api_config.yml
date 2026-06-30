@@ -1,7 +1,8 @@
+victron_system_config: /data/python/victron_system_monitor/data/system_configuration.yaml
 server:
   host: 0.0.0.0
   port: 5100
-  debug: false
+  debug: true
 file_endpoints:
 - id: victron
   description: Victron system monitor log files
@@ -42,6 +43,26 @@ command_endpoints:
   values:
   - 1
   - 4
+- id: mppt100_load_state_read
+  type: dbus_read
+  description: Read mppt100 load_mode
+  service: com.victronenergy.solarcharger.ttyUSB1
+  path: /Load/Status
+- id: mppt100_load_control_read
+  type: vedirect_get
+  description: Read mppt100 load_control via VE.Direct HEX
+  component: mppt100
+  register: 60843
+- id: mppt100_load_control
+  type: vedirect_set
+  description: Set mppt100 load_control via VE.Direct HEX
+  component: mppt100
+  register: 60843
+  allowed_values:
+  - 0
+  - 1
+  - 4
+  - 5
 - id: multiplus_inverter_mode_read
   type: dbus_read
   description: Read multiplus inverter_mode

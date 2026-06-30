@@ -45,19 +45,19 @@ fi
 
 # Create detached session with the data logger in the first window
 tmux new-session -d -s "$SESSION" -n "logger" \
-    "cd '$PROJECT_DIR' && uv run dbus_logger.py; read -p 'Press enter to close'"
+    "cd '$PROJECT_DIR' && uv run --no-dev dbus_logger.py; read -p 'Press enter to close'"
 
 # Add the REST API in a second window
 tmux new-window -t "$SESSION" -n "api" \
-    "cd '$PROJECT_DIR' && uv run rest_api_app.py; read -p 'Press enter to close'"
+    "cd '$PROJECT_DIR' && uv run --no-dev rest_api_app.py; read -p 'Press enter to close'"
 
 # Add the auxiliary logger in a third window
 tmux new-window -t "$SESSION" -n "aux_logger" \
-    "cd '$PROJECT_DIR' && uv run aux_logger.py; read -p 'Press enter to close'"
+    "cd '$PROJECT_DIR' && uv run --no-dev aux_logger.py; read -p 'Press enter to close'"
 
 # Add the battery control runner in a fourth window
 tmux new-window -t "$SESSION" -n "control" \
-    "cd '$PROJECT_DIR' && uv run control_runner.py; read -p 'Press enter to close'"
+    "cd '$PROJECT_DIR' && uv run --no-dev control_runner.py; read -p 'Press enter to close'"
 
 echo "Started tmux session '$SESSION' with windows: logger, api, aux_logger, control"
 echo "  Attach with: tmux attach -t $SESSION"

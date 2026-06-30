@@ -334,14 +334,21 @@ def save_system_configuration(psystem, bus,
 
         for state in component.component_states:
             if not state.toggle_values:
-                continue
-            toggle_commands.append({
-                'basename': state.basename,
-                'path': state.subaddress,
-                'values': list(state.toggle_values),
-                'read_command_id':   _toggle_command_id(short_name, state.basename, 'read'),
-                'toggle_command_id': _toggle_command_id(short_name, state.basename, 'toggle'),
-            })
+                toggle_commands.append({
+                    'basename': state.basename,
+                    'path': state.subaddress,
+                    'values': list(state.toggle_values),
+                    'read_command_id':   _toggle_command_id(short_name, state.basename, 'read'),
+                    'toggle_command_id': _toggle_command_id(short_name, state.basename, 'toggle'),
+                })
+            else:
+                toggle_commands.append({
+                    'basename': state.basename,
+                    'path': state.subaddress,
+                    'values': list(state.toggle_values),
+                    'read_command_id':   _toggle_command_id(short_name, state.basename, 'read'),
+                    'toggle_command_id': _toggle_command_id(short_name, state.basename, 'toggle'),
+                })
 
         set_commands = []
         for vs in getattr(component, 'vedirect_sets', []):

@@ -241,7 +241,7 @@ class VictronSolarChargerWithDCLoad(BaseComponent):
     component_states = [
         StateType(basename = 'tracking_state', subaddress='/State', mapping= {0 : 'off', 3: "bulk", 4: "absorbtion", 5: "float"}),
         StateType(basename = 'mppt_mode', subaddress='/Mode', mapping= {0: "ideal", 1: "working", 4: "off"}, toggle_values =[1,4]),
-        StateType(basename = 'load_state', subaddress='/Load/State', mapping= {0: "off", 1: "on"})
+        StateType(basename = 'load_state', subaddress='/Load/State', mapping= {1: "off", 4: "on", 5: "USER"}),
         ]
     vedirect_sets = [
         VeDirectSetType(basename='load_control', register=0xEDAB, allowed_values=[0, 1, 4, 5]),

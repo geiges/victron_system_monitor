@@ -337,7 +337,7 @@ def save_system_configuration(psystem, bus,
                 toggle_commands.append({
                     'basename': state.basename,
                     'path': state.subaddress,
-                    'values': list(state.toggle_values),
+                    'values': list(state.mapping.values()),
                     'read_command_id':   _toggle_command_id(short_name, state.basename, 'read'),
                     'toggle_command_id': _toggle_command_id(short_name, state.basename, 'toggle'),
                 })

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -8,6 +8,7 @@ class AgentResult:
     actions: list       # list[ScheduledAction]
     rationale: str
     metrics: dict       # dict[str, float]
+    sequences: list = field(default_factory=list)  # list[SequenceIntent]
 
     def to_dict(self) -> dict:
         return {
@@ -15,6 +16,7 @@ class AgentResult:
             "rationale": self.rationale,
             "metrics": self.metrics,
             "actions": [a.to_dict() for a in self.actions],
+            "sequences": [s.to_dict() for s in self.sequences],
         }
 
 

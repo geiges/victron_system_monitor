@@ -35,6 +35,25 @@ _TASMOTA_SPECS = {
 }
 
 
+def dbus_read_value(service: str, path: str) -> Optional[float]:
+    """Read a single numeric D-Bus value via GetValue. Returns None on error."""
+    cmd = ["dbus-send", "--system", "--print-reply",
+           f"--dest={service}", path,
+           "com.victronenergy.BusItem.GetValue"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            return None
+        for line in result.stdout.splitlines():
+            parts = line.strip().split()
+            # e.g. "variant       int32 3"  or  "variant       double 1.234"
+            if len(parts) >= 3 and parts[0] == "variant":
+                return float(parts[2])
+    except Exception as exc:
+        print(f"[actuator] dbus_read_value {service}{path}: {exc}")
+    return None
+
+
 def _get_service(system_config_path: Path, component_name: str) -> Optional[str]:
     """Return the D-Bus service name for a component, or None if unavailable."""
     try:

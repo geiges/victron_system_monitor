@@ -5,6 +5,8 @@ Routes
 GET  /control/config           Return current ControlConfig as JSON.
 PUT  /control/config           Partially update and persist ControlConfig.
 GET  /control/schedule         Return current schedule (control_schedule.json).
+GET  /control/sequence         Return active sequence status (sequence_status.json).
+POST /control/sequence/abort   Abort the active sequence (writes abort flag for runner).
 GET  /control/log?n=50         Return last N log entries (control_log.jsonl).
 GET  /control/log?agent=name   Filter entries by agent name.
 GET  /control/agents           Return all agents with enabled state + last result.
@@ -76,6 +78,23 @@ def put_config():
 
     updated.save(cfg_path)
     return jsonify(dataclasses.asdict(updated))
+
+
+@control_bp.get("/sequence")
+def get_sequence():
+    path = _data_dir() / "sequence_status.json"
+    if not path.exists():
+        return jsonify({"status": "none"})
+    with open(path) as f:
+        return jsonify(json.load(f))
+
+
+@control_bp.post("/sequence/abort")
+def abort_sequence():
+    flag = _data_dir() / "sequence_abort.flag"
+    flag.parent.mkdir(parents=True, exist_ok=True)
+    flag.touch()
+    return jsonify({"aborted": True})
 
 
 @control_bp.get("/schedule")

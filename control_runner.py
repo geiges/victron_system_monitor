@@ -21,12 +21,18 @@ from control.projection import BatteryProjector, save_projection_csv
 from control.schedule import Schedule
 from control.decision_log import DecisionLog, build_log_entry
 from control.actuator import execute_action
+from control.sequence_runner import SequenceRunner
+from control.sequences import SEQUENCES
 
 DATA_DIR = Path("data")
 CONFIG_PATH = DATA_DIR / "control_config.yaml"
 SCHEDULE_PATH = DATA_DIR / "control_schedule.json"
 LOG_PATH = DATA_DIR / "control_log.jsonl"
 PROJECTION_PATH = DATA_DIR / "projection_latest.csv"
+SEQUENCE_STATUS_PATH = DATA_DIR / "sequence_status.json"
+SEQUENCE_ABORT_FLAG = DATA_DIR / "sequence_abort.flag"
+SYSTEM_CONFIG_PATH = DATA_DIR / "system_configuration.yaml"
+SEQUENCE_TICK_S = 10
 
 
 def _load_agents():
@@ -66,19 +72,34 @@ def _arbitrate(results: list) -> Schedule:
     return Schedule(created_at=datetime.now(), actions=all_actions)
 
 
-def _sleep_to_next_interval(t_start: datetime, interval_seconds: int) -> None:
-    elapsed = (datetime.now() - t_start).total_seconds()
-    remaining = max(0.0, interval_seconds - elapsed)
-    if remaining > 0:
-        time.sleep(remaining)
+def _sleep_with_sequence_ticks(
+    t_start: datetime,
+    interval_seconds: int,
+    sequence_runner: SequenceRunner,
+    config: ControlConfig,
+) -> None:
+    """Sleep until the next full cycle, ticking the sequence runner every 10 s."""
+    while True:
+        remaining = interval_seconds - (datetime.now() - t_start).total_seconds()
+        if remaining <= 0:
+            break
+        time.sleep(min(SEQUENCE_TICK_S, remaining))
+        if SEQUENCE_ABORT_FLAG.exists():
+            SEQUENCE_ABORT_FLAG.unlink()
+            sequence_runner.abort()
+        elif sequence_runner.is_active():
+            seq_actions = sequence_runner.tick(config, SYSTEM_CONFIG_PATH)
+            for action in seq_actions:
+                execute_action(action, config.actuators)
 
 
 def run_loop(config: ControlConfig) -> None:
-    
+
     agents = _load_agents()
     forecast_provider = SolarForecastProvider(config.forecast)
     projector = BatteryProjector(config)
     log = DecisionLog(LOG_PATH)
+    sequence_runner = SequenceRunner(SEQUENCE_STATUS_PATH)
 
     print(f"[runner] starting — safety={config.safety_interval_seconds}s, "
           f"planning={config.control_interval_seconds}s, "
@@ -96,15 +117,15 @@ def run_loop(config: ControlConfig) -> None:
             projector = BatteryProjector(config)
         except Exception as e:
             print(f"[runner] error loading config: {e} — skipping cycle")
-            _sleep_to_next_interval(t_start, config.safety_interval_seconds)
+            _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
-        
-        
+
+
         try:
             state = read_current_state(DATA_DIR)
         except StateUnavailableError as exc:
             print(f"[runner] state unavailable: {exc} — skipping cycle")
-            _sleep_to_next_interval(t_start, config.safety_interval_seconds)
+            _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
 
         forecast = forecast_provider.get()
@@ -123,7 +144,7 @@ def run_loop(config: ControlConfig) -> None:
 
         if projection is None:
             print("[runner] no projection available yet — skipping agents")
-            _sleep_to_next_interval(t_start, config.safety_interval_seconds)
+            _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
 
         results = []
@@ -141,7 +162,7 @@ def run_loop(config: ControlConfig) -> None:
                     log.append_agent_result(result)
                 except Exception as exc:
                     print(f"[runner] agent {agent.name} raised: {exc}")
-            
+
         if run_planning:
             last_planning_t = t_start
             save_projection_csv(projection, PROJECTION_PATH)
@@ -152,6 +173,21 @@ def run_loop(config: ControlConfig) -> None:
         for action in schedule.due_now():
             execute_action(action, config.actuators)
 
+        # Dispatch sequence intents from agent results
+        if not sequence_runner.is_active():
+            for result in results:
+                for intent in result.sequences:
+                    if intent.is_due():
+                        seq_cls = SEQUENCES.get(intent.sequence_name)
+                        if seq_cls is not None:
+                            sequence_runner.start(seq_cls(), config, SYSTEM_CONFIG_PATH)
+                        else:
+                            print(f"[runner] unknown sequence: {intent.sequence_name!r}")
+                        break  # at most one sequence started per cycle
+                else:
+                    continue
+                break
+
         entry = build_log_entry(state, forecast, projection, results, schedule)
         # log.append(entry)
 
@@ -161,7 +197,7 @@ def run_loop(config: ControlConfig) -> None:
               f"max={proj['max_soc']:.1%} (in {proj['max_soc_hour']}h), "
               f"actions={len(schedule.actions)}")
 
-        _sleep_to_next_interval(t_start, config.safety_interval_seconds)
+        _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
 
 
 # ---------------------------------------------------------------------------

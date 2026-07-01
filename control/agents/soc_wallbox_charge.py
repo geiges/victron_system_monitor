@@ -3,6 +3,7 @@ from pathlib import Path
 
 from control.agents.base import BaseAgent, AgentResult
 from control.schedule import ScheduledAction
+from control.sequence import SequenceIntent
 from control.state import minutes_at_full_soc
 
 
@@ -114,19 +115,19 @@ class SocWallboxChargeAgent(BaseAgent):
                 f"SOC at full for {minutes_full:.0f} min "
                 f"(threshold {agent_cfg.soc_on_minutes} min)"
             )
-            actions = []
+            sequences = []
             if actcfg.wallbox_charge:
-                actions.append(ScheduledAction(
+                sequences.append(SequenceIntent(
+                    sequence_name="wallbox_on",
                     execute_at=now,
-                    actuator="wallbox_charge",
-                    value=1,
-                    reason=reason,
                     agent=self.name,
+                    reason=reason,
                 ))
             return AgentResult(
                 agent_name=self.name,
-                actions=actions,
-                rationale=f"wallbox ON — {reason}",
+                actions=[],
+                sequences=sequences,
+                rationale=f"wallbox ON sequence — {reason}",
                 metrics=metrics,
             )
 

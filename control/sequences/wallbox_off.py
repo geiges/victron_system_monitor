@@ -17,7 +17,7 @@ def _now_action(actuator: str, value: int) -> ScheduledAction:
     )
 
 
-class WallboxOnSequence(Sequence):
+class WallboxOffSequence(Sequence):
     name = "wallbox_off"
 
     def build_steps(self, config, system_config_path: Path) -> list[SequenceStep]:

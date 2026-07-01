@@ -6,6 +6,7 @@ Usage:
     uv run control_runner.py --dry-run  # print state/forecast/projection and exit
 """
 import argparse
+import json
 import sys
 import time
 from datetime import datetime
@@ -31,6 +32,7 @@ LOG_PATH = DATA_DIR / "control_log.jsonl"
 PROJECTION_PATH = DATA_DIR / "projection_latest.csv"
 SEQUENCE_STATUS_PATH = DATA_DIR / "sequence_status.json"
 SEQUENCE_ABORT_FLAG = DATA_DIR / "sequence_abort.flag"
+SEQUENCE_START_FLAG = DATA_DIR / "sequence_start.json"
 SYSTEM_CONFIG_PATH = DATA_DIR / "system_configuration.yaml"
 SEQUENCE_TICK_S = 10
 
@@ -87,7 +89,20 @@ def _sleep_with_sequence_ticks(
         if SEQUENCE_ABORT_FLAG.exists():
             SEQUENCE_ABORT_FLAG.unlink()
             sequence_runner.abort()
-        elif sequence_runner.is_active():
+        if SEQUENCE_START_FLAG.exists():
+            try:
+                name = json.loads(SEQUENCE_START_FLAG.read_text()).get("sequence_name", "")
+                SEQUENCE_START_FLAG.unlink()
+                if name and not sequence_runner.is_active():
+                    seq_cls = SEQUENCES.get(name)
+                    if seq_cls:
+                        sequence_runner.start(seq_cls(), config, SYSTEM_CONFIG_PATH)
+                    else:
+                        print(f"[runner] manual start: unknown sequence {name!r}")
+            except Exception as exc:
+                print(f"[runner] sequence start flag error: {exc}")
+                SEQUENCE_START_FLAG.unlink(missing_ok=True)
+        if sequence_runner.is_active():
             seq_actions = sequence_runner.tick(config, SYSTEM_CONFIG_PATH)
             for action in seq_actions:
                 execute_action(action, config.actuators)

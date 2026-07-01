@@ -7,6 +7,8 @@ PUT  /control/config           Partially update and persist ControlConfig.
 GET  /control/schedule         Return current schedule (control_schedule.json).
 GET  /control/sequence         Return active sequence status (sequence_status.json).
 POST /control/sequence/abort   Abort the active sequence (writes abort flag for runner).
+POST /control/sequence/start   Manually start a named sequence (writes start flag for runner).
+GET  /control/sequences        List available sequence names.
 GET  /control/log?n=50         Return last N log entries (control_log.jsonl).
 GET  /control/log?agent=name   Filter entries by agent name.
 GET  /control/agents           Return all agents with enabled state + last result.
@@ -95,6 +97,25 @@ def abort_sequence():
     flag.parent.mkdir(parents=True, exist_ok=True)
     flag.touch()
     return jsonify({"aborted": True})
+
+
+@control_bp.post("/sequence/start")
+def start_sequence():
+    body = request.get_json(silent=True) or {}
+    name = body.get("sequence_name", "")
+    from control.sequences import SEQUENCES
+    if name not in SEQUENCES:
+        return jsonify({"error": f"unknown sequence {name!r}"}), 400
+    flag = _data_dir() / "sequence_start.json"
+    flag.parent.mkdir(parents=True, exist_ok=True)
+    flag.write_text(json.dumps({"sequence_name": name}))
+    return jsonify({"started": name})
+
+
+@control_bp.get("/sequences")
+def list_sequences():
+    from control.sequences import SEQUENCES
+    return jsonify(list(SEQUENCES.keys()))
 
 
 @control_bp.get("/schedule")

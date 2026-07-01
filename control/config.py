@@ -118,7 +118,8 @@ class ActuatorsConfig:
     multiplus_mode_on: int = 3
     multiplus_mode_off: int = 4
     mppt100_load: bool = True
-    mppt100_load_on: int = 1
+    mppt100_load_on: int = 4
+    mppt100_load_auto: int = 5
     mppt100_load_off: int = 0
     mppt100_load_api_url: str = "http://localhost:5100/command/mppt100_load_control"
     wallbox_charge: bool = True

@@ -25,7 +25,8 @@ class SequenceRunner:
         self._steps: list[SequenceStep] = []
         self._state: Optional[SequenceState] = None
         self._cooldown: dict[str, datetime] = {}  # sequence_name → completed_at
-        self.tz = tz
+        self.timezone = pytz.timezone(tz)
+
 
     def is_active(self) -> bool:
         return self._state is not None and self._state.status == "running"
@@ -88,10 +89,10 @@ class SequenceRunner:
             next_idx = state.current_step + 1
             if next_idx >= state.total_steps:
                 state.status = "done"
-                state.completed_at = datetime.now().isoformat()
+                state.completed_at = datetime.now(tz=self.timezone).isoformat()
                 state.log.append(f"{ts} sequence complete")
                 print(f"[sequence] {state.sequence_name!r} DONE")
-                self._cooldown[state.sequence_name] = datetime.now()
+                self._cooldown[state.sequence_name] = datetime.now(tz=self.timezone)
             else:
                 state.current_step = next_idx
                 state.step_name = self._steps[next_idx].name
@@ -101,7 +102,7 @@ class SequenceRunner:
             state.step_attempt += 1
             if state.step_attempt > step.max_retries:
                 state.status = "failed"
-                state.completed_at = datetime.now().isoformat()
+                state.completed_at = datetime.now(tz=self.timezone).isoformat()
                 state.log.append(f"{ts} {state.step_name}: max retries exceeded — sequence failed")
                 print(f"[sequence] {state.sequence_name!r} FAILED at {state.step_name!r}")
             else:
@@ -113,7 +114,7 @@ class SequenceRunner:
     def abort(self) -> None:
         if self._state and self._state.status == "running":
             self._state.status = "failed"
-            self._state.completed_at = datetime.now().isoformat()
+            self._state.completed_at = datetime.now(tz=self.timezone).isoformat()
             self._state.log.append(f"[{datetime.now():%H:%M:%S}] manually aborted")
             self._write_status()
         self._sequence = None

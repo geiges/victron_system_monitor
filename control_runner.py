@@ -15,7 +15,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
-from control.config import ControlConfig
+from control.config import ControlConfig, tz
 from control.state import read_current_state, StateUnavailableError
 from control.forecast import SolarForecastProvider
 from control.projection import BatteryProjector, save_projection_csv
@@ -114,7 +114,7 @@ def run_loop(config: ControlConfig) -> None:
     forecast_provider = SolarForecastProvider(config.forecast)
     projector = BatteryProjector(config)
     log = DecisionLog(LOG_PATH)
-    sequence_runner = SequenceRunner(SEQUENCE_STATUS_PATH)
+    sequence_runner = SequenceRunner(SEQUENCE_STATUS_PATH, tz)
 
     print(f"[runner] starting — safety={config.safety_interval_seconds}s, "
           f"planning={config.control_interval_seconds}s, "

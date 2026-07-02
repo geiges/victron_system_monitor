@@ -3,7 +3,9 @@ import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from config_default import batt_config_V1 as _batt
+from config_default import (batt_config_V1 as _batt,
+                            tz
+                            )
 
 
 @dataclass

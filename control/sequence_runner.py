@@ -8,21 +8,24 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from dataclasses import dataclass
 
 from control.sequence import Sequence, SequenceState, SequenceStep
 from control.schedule import ScheduledAction
+
 
 # Don't restart a successfully completed sequence within this window (in-session only).
 _COOLDOWN_S = 3600
 
 
 class SequenceRunner:
-    def __init__(self, status_path: Path):
+    def __init__(self, status_path: Path, tz: str):
         self._status_path = status_path
         self._sequence: Optional[Sequence] = None
         self._steps: list[SequenceStep] = []
         self._state: Optional[SequenceState] = None
         self._cooldown: dict[str, datetime] = {}  # sequence_name → completed_at
+        self.tz = tz
 
     def is_active(self) -> bool:
         return self._state is not None and self._state.status == "running"
@@ -44,7 +47,7 @@ class SequenceRunner:
             total_steps=len(self._steps),
             step_name=self._steps[0].name,
             step_names=[s.name for s in self._steps],
-            started_at=datetime.now().isoformat(),
+            started_at=datetime.now(datetime.now(tz=self.tz)).isoformat(),
             step_attempt=0,
             action_executed=False,
             status="running",

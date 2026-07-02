@@ -35,7 +35,7 @@ class SequenceRunner:
         """Start a sequence. Returns False (no-op) if still in cooldown."""
         completed = self._cooldown.get(sequence.name)
         if completed is not None:
-            elapsed = (datetime.now() - completed).total_seconds()
+            elapsed = (datetime.now(tz=self.timezone) - completed).total_seconds()
             if elapsed < _COOLDOWN_S:
                 print(f"[sequence] {sequence.name!r} completed {elapsed:.0f}s ago — cooldown active")
                 return False
@@ -48,11 +48,11 @@ class SequenceRunner:
             total_steps=len(self._steps),
             step_name=self._steps[0].name,
             step_names=[s.name for s in self._steps],
-            started_at=datetime.now(datetime.now(tz=self.tz)).isoformat(),
+            started_at=datetime.now(datetime.now(tz=self.timezone)).isoformat(),
             step_attempt=0,
             action_executed=False,
             status="running",
-            log=[f"[{datetime.now():%H:%M:%S}] started"],
+            log=[f"[{datetime.now(tz=self.timezone):%H:%M:%S}] started"],
         )
         self._write_status()
         print(f"[sequence] started {sequence.name!r} ({len(self._steps)} steps)")
@@ -68,7 +68,7 @@ class SequenceRunner:
 
         state = self._state
         step = self._steps[state.current_step]
-        ts = f"[{datetime.now():%H:%M:%S}]"
+        ts = f"[{datetime.now(tz=self.timezone):%H:%M:%S}]"
 
         if not state.action_executed:
             state.action_executed = True
@@ -115,7 +115,7 @@ class SequenceRunner:
         if self._state and self._state.status == "running":
             self._state.status = "failed"
             self._state.completed_at = datetime.now(tz=self.timezone).isoformat()
-            self._state.log.append(f"[{datetime.now():%H:%M:%S}] manually aborted")
+            self._state.log.append(f"[{datetime.now(tz=self.timezone):%H:%M:%S}] manually aborted")
             self._write_status()
         self._sequence = None
         self._steps = []

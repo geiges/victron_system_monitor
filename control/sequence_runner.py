@@ -48,7 +48,7 @@ class SequenceRunner:
             total_steps=len(self._steps),
             step_name=self._steps[0].name,
             step_names=[s.name for s in self._steps],
-            started_at=datetime.now(datetime.now(tz=self.timezone)).isoformat(),
+            started_at=datetime.now(tz=self.timezone).isoformat(),
             step_attempt=0,
             action_executed=False,
             status="running",

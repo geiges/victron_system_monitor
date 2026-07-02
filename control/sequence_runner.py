@@ -5,17 +5,17 @@ written after each tick for REST API display — it is never read back to drive
 the sequence (no file-based tick state exchange).
 """
 import json
+import pytz
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass
 
 from control.sequence import Sequence, SequenceState, SequenceStep
 from control.schedule import ScheduledAction
 
 
 # Don't restart a successfully completed sequence within this window (in-session only).
-_COOLDOWN_S = 3600
+_COOLDOWN_S = 300
 
 
 class SequenceRunner:

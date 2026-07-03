@@ -5,7 +5,7 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
 import pytz
-import config
+import control.config as config
 
 timezone = pytz.timezone(config.tz)
 

@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
+import pytz
+import config
 
+timezone = pytz.timezone(config.tz)
 
 class StateUnavailableError(Exception):
     pass
@@ -81,7 +84,7 @@ def minutes_at_full_soc(
     if not sim_files:
         return None
 
-    now = _now or datetime.now()
+    now = _now or datetime.now(tz=timezone)
     latest = sim_files[-1]
     date_str = latest.stem.replace("sim_", "")
     try:
@@ -182,7 +185,7 @@ def read_current_state(data_dir: Path = Path("data")) -> CurrentState:
         )
 
     timestamp = (
-        _parse_time_field(state["time"]) if "time" in state else datetime.now()
+        _parse_time_field(state["time"]) if "time" in state else datetime.now(tz=timezone)
     )
 
     return CurrentState(

@@ -56,7 +56,7 @@ class WallboxOffSequence(Sequence):
                 max_retries=5,
             ),
             SequenceStep(
-                name="inverter_on",
+                name="inverter_off",
                 action_fn=lambda: _now_action("multiplus_mode", multiplus_mode_off),
                 verify=lambda: dbus_read_value(multiplus_svc, "/Mode") == multiplus_mode_off if multiplus_svc else False,
                 max_retries=3,

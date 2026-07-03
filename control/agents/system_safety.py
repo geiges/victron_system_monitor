@@ -106,7 +106,7 @@ class SystemSafetyAgent(BaseAgent):
             two_sided = spec["min"] is not None and spec["max"] is not None
             margins = []
             
-            
+            metrics[f"{key}_value"] = value
             if spec["warn_min"] is not None:
                 metrics[f"{key}_warn_min"] =  spec["warn_min"]
                 

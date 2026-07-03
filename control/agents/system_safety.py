@@ -48,6 +48,8 @@ class SystemSafetyAgent(BaseAgent):
             "soc": {
                 "value": lambda s: s.soc*100,
                 "min": bcfg.min_soc,
+                "warn_min": .25,
+                "warn_max" : None,
                 "max": None,
                 "label": "SOC",
                 "fmt": ".0%",
@@ -57,6 +59,8 @@ class SystemSafetyAgent(BaseAgent):
                 "value": lambda s: s.battery_voltage,
                 "min": bcfg.min_voltage,
                 "max": bcfg.max_voltage,
+                "warn_min": 25,
+                "warn_max" : 28,
                 "label": "voltage",
                 "fmt": ".2f",
                 "unit": "V",
@@ -66,6 +70,8 @@ class SystemSafetyAgent(BaseAgent):
                 "value": lambda s: s.battery_temp,
                 "min": bcfg.min_temp,
                 "max": bcfg.max_temp,
+                "warn_min": 10,
+                "warn_max" : 35,
                 "label": "temperature",
                 "fmt": ".1f",
                 "unit": "°C",
@@ -75,6 +81,8 @@ class SystemSafetyAgent(BaseAgent):
                 "value": lambda s: s.ac_load_w,
                 "min": None,
                 "max": bcfg.max_ac_load_w,
+                "warn_min" : None,
+                "warn_max" : 2200,
                 "label": "AC load output",
                 "fmt": ".1f",
                 "unit": "W",
@@ -98,7 +106,13 @@ class SystemSafetyAgent(BaseAgent):
             two_sided = spec["min"] is not None and spec["max"] is not None
             margins = []
             
-            metrics[f"{key}_value"] =  value
+            
+            if spec["warn_min"] is not None:
+                metrics[f"{key}_warn_min"] =  spec["warn_min"]
+                
+            if spec["warn_ min"] is not None:
+                metrics[f"{key}_warn_max"] =  spec["warn_min"]
+            
             if spec["min"] is not None:
                 margin = value - spec["min"]
                 margins.append(margin)

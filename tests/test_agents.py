@@ -68,13 +68,13 @@ def test_safety_confirmed_disable_alone_does_not_disable():
 # ---------------------------------------------------------------------------
 
 def test_safety_no_action_when_all_ok():
-    result = SystemSafetyAgent().run(_make_projection(), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection().current, ControlConfig())
     assert result.actions == []
     assert "OK" in result.rationale
 
 
 def test_safety_agent_name():
-    result = SystemSafetyAgent().run(_make_projection(), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection().current, ControlConfig())
     assert result.agent_name == "system_safety"
 
 
@@ -83,22 +83,23 @@ def test_safety_agent_name():
 # ---------------------------------------------------------------------------
 
 def test_safety_low_soc_triggers_multiplus():
-    result = SystemSafetyAgent().run(_make_projection(soc=0.10), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(soc=0.10).current, ControlConfig())
     actuators = {a.actuator for a in result.actions}
     assert "multiplus_mode" in actuators
-    assert "mppt100_load" not in actuators
+    assert "mppt100_load" in actuators
+    assert "ac_inverter_plug" not in actuators
 
 
 def test_safety_low_soc_multiplus_set_to_off():
     cfg = ControlConfig()
-    result = SystemSafetyAgent().run(_make_projection(soc=0.10), cfg)
+    result = SystemSafetyAgent().run(_make_projection(soc=0.10).current, cfg)
     mp = next(a for a in result.actions if a.actuator == "multiplus_mode")
     assert mp.value == cfg.actuators.multiplus_mode_off
 
 
 def test_safety_soc_exactly_at_limit_no_action():
     cfg = ControlConfig()
-    result = SystemSafetyAgent().run(_make_projection(soc=cfg.battery.min_soc), cfg)
+    result = SystemSafetyAgent().run(_make_projection(soc=cfg.battery.min_soc).current, cfg)
     assert result.actions == []
 
 
@@ -107,15 +108,16 @@ def test_safety_soc_exactly_at_limit_no_action():
 # ---------------------------------------------------------------------------
 
 def test_safety_low_voltage_triggers_multiplus():
-    result = SystemSafetyAgent().run(_make_projection(voltage=22.0), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(voltage=22.0).current, ControlConfig())
     actuators = {a.actuator for a in result.actions}
     assert "multiplus_mode" in actuators
-    assert "mppt100_load" not in actuators
+    assert "mppt100_load" in actuators
+    assert "ac_inverter_plug" not in actuators
 
 
 def test_safety_voltage_exactly_at_min_limit_no_action():
     cfg = ControlConfig()
-    result = SystemSafetyAgent().run(_make_projection(voltage=cfg.battery.min_voltage), cfg)
+    result = SystemSafetyAgent().run(_make_projection(voltage=cfg.battery.min_voltage).current, cfg)
     assert result.actions == []
 
 
@@ -126,14 +128,14 @@ def test_safety_voltage_exactly_at_min_limit_no_action():
 def test_safety_high_voltage_triggers_multiplus():
     cfg = ControlConfig()
     result = SystemSafetyAgent().run(
-        _make_projection(voltage=cfg.battery.max_voltage + 0.5), cfg
+        _make_projection(voltage=cfg.battery.max_voltage + 0.5).current, cfg
     )
-    assert any(a.actuator == "multiplus_mode" for a in result.actions)
+    assert any(a.actuator == "ac_inverter_plug" for a in result.actions)
 
 
 def test_safety_voltage_exactly_at_max_limit_no_action():
     cfg = ControlConfig()
-    result = SystemSafetyAgent().run(_make_projection(voltage=cfg.battery.max_voltage), cfg)
+    result = SystemSafetyAgent().run(_make_projection(voltage=cfg.battery.max_voltage).current, cfg)
     assert result.actions == []
 
 
@@ -142,22 +144,22 @@ def test_safety_voltage_exactly_at_max_limit_no_action():
 # ---------------------------------------------------------------------------
 
 def test_safety_high_temp_triggers_multiplus():
-    result = SystemSafetyAgent().run(_make_projection(temp=46.0), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(temp=46.0).current, ControlConfig())
     actuators = {a.actuator for a in result.actions}
-    assert "multiplus_mode" in actuators
+    assert "ac_inverter_plug" in actuators
 
 
 def test_safety_low_temp_triggers_multiplus():
     cfg = ControlConfig()
     result = SystemSafetyAgent().run(
-        _make_projection(temp=cfg.battery.min_temp - 1.0), cfg
+        _make_projection(temp=cfg.battery.min_temp - 1.0).current, cfg
     )
     assert any(a.actuator == "multiplus_mode" for a in result.actions)
 
 
 def test_safety_high_temp_no_duplicate_multiplus_action():
     """When both low SOC and high temp apply, multiplus_mode appears only once."""
-    result = SystemSafetyAgent().run(_make_projection(soc=0.10, temp=46.0), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(soc=0.10, temp=46.0).current, ControlConfig())
     mp_actions = [a for a in result.actions if a.actuator == "multiplus_mode"]
     assert len(mp_actions) == 1
 
@@ -169,7 +171,7 @@ def test_safety_high_temp_no_duplicate_multiplus_action():
 def test_safety_multiple_triggers_all_mentioned_in_rationale():
     cfg = ControlConfig()
     result = SystemSafetyAgent().run(
-        _make_projection(soc=0.05, voltage=cfg.battery.min_voltage - 1, temp=50.0), cfg
+        _make_projection(soc=0.05, voltage=cfg.battery.min_voltage - 1, temp=50.0).current, cfg
     )
     assert "SOC" in result.rationale
     assert "voltage" in result.rationale.lower()
@@ -181,7 +183,7 @@ def test_safety_multiple_triggers_all_mentioned_in_rationale():
 # ---------------------------------------------------------------------------
 
 def test_safety_metrics_always_present():
-    result = SystemSafetyAgent().run(_make_projection(), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection().current, ControlConfig())
     for key in ("soc_margin", "min_voltage_margin", "max_voltage_margin",
                 "min_temp_margin", "max_temp_margin"):
         assert key in result.metrics
@@ -189,7 +191,7 @@ def test_safety_metrics_always_present():
 
 def test_safety_metrics_margins_positive_when_ok():
     cfg = ControlConfig()
-    result = SystemSafetyAgent().run(_make_projection(soc=0.50, voltage=26.0, temp=25.0), cfg)
+    result = SystemSafetyAgent().run(_make_projection(soc=0.50, voltage=26.0, temp=25.0).current, cfg)
     assert result.metrics["soc_margin"] > 0
     assert result.metrics["min_voltage_margin"] > 0
     assert result.metrics["max_voltage_margin"] > 0
@@ -199,7 +201,7 @@ def test_safety_metrics_margins_positive_when_ok():
 
 def test_safety_metrics_soc_margin_negative_when_low():
     cfg = ControlConfig()
-    result = SystemSafetyAgent().run(_make_projection(soc=0.10), cfg)
+    result = SystemSafetyAgent().run(_make_projection(soc=0.10).current, cfg)
     assert result.metrics["soc_margin"] < 0
 
 
@@ -208,7 +210,7 @@ def test_safety_metrics_soc_margin_negative_when_low():
 # ---------------------------------------------------------------------------
 
 def test_safety_actions_are_due_immediately():
-    result = SystemSafetyAgent().run(_make_projection(soc=0.10), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(soc=0.10).current, ControlConfig())
     for action in result.actions:
         assert action.is_due(window_seconds=60.0)
 
@@ -218,17 +220,17 @@ def test_safety_actions_are_due_immediately():
 # ---------------------------------------------------------------------------
 
 def test_safety_rationale_mentions_soc_on_low_soc():
-    result = SystemSafetyAgent().run(_make_projection(soc=0.05), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(soc=0.05).current, ControlConfig())
     assert "SOC" in result.rationale
 
 
 def test_safety_rationale_mentions_voltage_on_low_voltage():
-    result = SystemSafetyAgent().run(_make_projection(voltage=20.0), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(voltage=20.0).current, ControlConfig())
     assert "voltage" in result.rationale.lower()
 
 
 def test_safety_rationale_mentions_temp_on_overtemp():
-    result = SystemSafetyAgent().run(_make_projection(temp=50.0), ControlConfig())
+    result = SystemSafetyAgent().run(_make_projection(temp=50.0).current, ControlConfig())
     assert "temperature" in result.rationale.lower()
 
 

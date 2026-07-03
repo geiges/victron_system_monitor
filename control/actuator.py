@@ -32,6 +32,7 @@ _LOCAL_API_SPECS = {
 # Tasmota actuators: name → (primary URL attr, fallback URL attr)
 _TASMOTA_SPECS = {
     "wallbox_charge": ("wallbox_tasmota_url", "wallbox_tasmota_fallback_url"),
+    "ac_inverter_plug": ("ac_inverter_tasmota_url", "ac_inverter_tasmota_fallback_url"),
 }
 
 

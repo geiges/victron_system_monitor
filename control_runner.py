@@ -36,15 +36,19 @@ SEQUENCE_START_FLAG = DATA_DIR / "sequence_start.json"
 SYSTEM_CONFIG_PATH = DATA_DIR / "system_configuration.yaml"
 SEQUENCE_TICK_S = 10
 
+def _load_safety_agent():
+    """Import and instantiate the mandatory safety agent"""
+    from control.agents.system_safety import SystemSafetyAgent
+    
+    return SystemSafetyAgent()
 
 def _load_agents():
-    """Import and instantiate all agent classes."""
-    from control.agents.system_safety import SystemSafetyAgent
+    """Import and instantiate all optional agent classes. Safety agent is handled
+    separately """
     from control.agents.time_based import TimeBasedAgent
     from control.agents.soc_wallbox_charge import SocWallboxChargeAgent
     from control.agents.forecast_wallbox import ForecastWallboxAgent
     return [
-        SystemSafetyAgent(),
         SocWallboxChargeAgent(DATA_DIR),
         TimeBasedAgent(),
         ForecastWallboxAgent(),
@@ -110,6 +114,7 @@ def _sleep_with_sequence_ticks(
 
 def run_loop(config: ControlConfig) -> None:
 
+    safety_agent = _load_safety_agent()
     agents = _load_agents()
     forecast_provider = SolarForecastProvider(config.forecast)
     projector = BatteryProjector(config)
@@ -125,6 +130,7 @@ def run_loop(config: ControlConfig) -> None:
 
     while True:
         t_start = datetime.now()
+        results = []
 
         # Reload config each cycle so REST API edits take effect
         try:
@@ -135,11 +141,19 @@ def run_loop(config: ControlConfig) -> None:
             _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
 
-
         try:
             state = read_current_state(DATA_DIR)
         except StateUnavailableError as exc:
             print(f"[runner] state unavailable: {exc} — skipping cycle")
+            _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
+            continue
+
+        try:
+            # Run mandatory safety agent
+            result = safety_agent.run(state, config)
+            results.append(result)
+        except Exception as e:
+            print(f"[runner] safety agent execution error: {e} — skipping cycle")
             _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
 
@@ -158,12 +172,14 @@ def run_loop(config: ControlConfig) -> None:
                 print(f"[runner] error in projection: {e}")
 
         if projection is None:
-            print("[runner] no projection available yet — skipping agents")
+            print("[runner] no projection available yet — running safety agent only")
+            schedule = _arbitrate(results)
+            schedule.save(SCHEDULE_PATH)
+            for action in schedule.due_now():
+                execute_action(action, config.actuators)
             _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
 
-        results = []
-        latest_results = {}
         for agent in agents:
             if not agent.is_enabled(config):
                 continue
@@ -172,7 +188,6 @@ def run_loop(config: ControlConfig) -> None:
                 try:
                     result = agent.run(projection, config)
                     results.append(result)
-                    latest_results[agent.name] = result
                     print(f"[{result.agent_name}] {result.rationale}")
                     log.append_agent_result(result)
                 except Exception as exc:

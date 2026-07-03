@@ -94,6 +94,7 @@ batt_config_V1 = {
     "max_safety_voltage" : 28.9,
     "min_safety_temperature" : 5,
     "max_safety_temperature" : 45,
+    "max_safety_ac_load_w" : 2500,
 }
 
 import aux_components as aux_comp

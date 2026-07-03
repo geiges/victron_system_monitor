@@ -21,6 +21,7 @@ class BatteryConfig:
     max_voltage: float = _batt["max_safety_voltage"]
     min_temp: float = _batt["min_safety_temperature"]
     max_temp: float = _batt["max_safety_temperature"]
+    max_ac_load_w: float = _batt["max_safety_ac_load_w"]
 
     @classmethod
     def from_dict(cls, d: dict) -> "BatteryConfig":
@@ -127,7 +128,10 @@ class ActuatorsConfig:
     wallbox_charge: bool = True
     wallbox_tasmota_url: str = "http://tasmota-158A57-2647"
     wallbox_tasmota_fallback_url: str = "http://192.168.1.185"
-
+    ac_inverter_plug: bool = True
+    ac_inverter_plug_tasmota_url: str = "http://tasmota-156ecf-3791"
+    ac_inverter_plug_tasmota_fallback_url: str =  "http://192.168.1.60"
+    
     @classmethod
     def from_dict(cls, d: dict) -> "ActuatorsConfig":
         valid = {f.name for f in dataclasses.fields(cls)}

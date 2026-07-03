@@ -4,95 +4,144 @@ from control.agents.base import BaseAgent, AgentResult
 from control.schedule import ScheduledAction
 
 
+def _switch_off_ac(actcfg):
+    if not actcfg.multiplus_mode:
+        return []
+    return [("multiplus_mode", actcfg.multiplus_mode_off)]
+
+
+def _switch_dc_load(actcfg):
+    if not actcfg.mppt100_load:
+        return []
+    return [("mppt100_load", actcfg.mppt100_load_off)]
+
+
+def _switch_off_ac_mppt(actcfg):
+    if not actcfg.ac_inverter_plug:
+        return []
+    return [("ac_inverter_plug", 0)]  # Tasmota smart plug: hard-cuts AC to the inverter
+
+
+ACTIONS = {
+    "switch_off_AC": _switch_off_ac,
+    "switch_DC_load": _switch_dc_load,
+    "switch_off_AC_mppt": _switch_off_ac_mppt,
+}
+
+# ponytail: one policy for every metric today — a low breach cuts what drains the
+# battery (AC inverter mode + DC load), a high breach hard-cuts AC via the smart
+# plug. Give a metric its own "action" dict when it needs to diverge.
+_MIN_ACTIONS = ["switch_off_AC", "switch_DC_load"]
+_MAX_ACTIONS = ["switch_off_AC_mppt"]
+
+
 class SystemSafetyAgent(BaseAgent):
     name = "system_safety"
     fast_cycle = True
 
     def is_enabled(self, config) -> bool:
-        cfg = config.agents.system_safety
-        return not (not cfg.enabled and cfg.confirmed_disable)
+        True
 
-    def run(self, projection, config) -> AgentResult:
-        current = projection.current
-        bcfg = config.battery
-        actcfg = config.actuators
-
-        now = datetime.now()
-        actions = []
-        warnings = []
-
-        soc_margin = current.soc - bcfg.min_soc
-        min_voltage_margin = current.battery_voltage - bcfg.min_voltage
-        max_voltage_margin = bcfg.max_voltage - current.battery_voltage
-        voltage_margin = min(min_voltage_margin, max_voltage_margin)
-
-        min_temp_margin = current.battery_temp - bcfg.min_temp
-        max_temp_margin = bcfg.max_temp - current.battery_temp
-        temp_margin = min(min_temp_margin, max_temp_margin)
-
-        metrics = {
-            "soc": round(current.soc, 4),
-            "soc_margin": round(soc_margin, 4),
-            "min_voltage_margin": round(min_voltage_margin, 2),
-            "max_voltage_margin": round(max_voltage_margin, 2),
-            "min_temp_margin": round(min_temp_margin, 1),
-            "max_temp_margin": round(max_temp_margin, 1),
+    @staticmethod
+    def _safety_metrics(bcfg):
+        return {
+            "soc": {
+                "value": lambda s: s.soc,
+                "min": bcfg.min_soc,
+                "max": None,
+                "label": "SOC",
+                "fmt": ".1%",
+                "action": {"min": _MIN_ACTIONS},
+            },
+            "voltage": {
+                "value": lambda s: s.battery_voltage,
+                "min": bcfg.min_voltage,
+                "max": bcfg.max_voltage,
+                "label": "voltage",
+                "fmt": ".2f",
+                "unit": "V",
+                "action": {"min": _MIN_ACTIONS, "max": _MAX_ACTIONS},
+            },
+            "temp": {
+                "value": lambda s: s.battery_temp,
+                "min": bcfg.min_temp,
+                "max": bcfg.max_temp,
+                "label": "temperature",
+                "fmt": ".1f",
+                "unit": "°C",
+                "action": {"min": _MIN_ACTIONS, "max": _MAX_ACTIONS},
+                },
+            "ac_load": {
+                "value": lambda s: s.ac_load_w,
+                "min": None,
+                "max": bcfg.max_ac_load_w,
+                "label": "AC load output",
+                "fmt": ".1f",
+                "unit": "W",
+                "action": {"max": ["switch_off_AC"]},
+                },
         }
 
-        switch_off_AC = False
+    def run(self, state, config) -> AgentResult:
+        current = state
+        actcfg = config.actuators
+        now = datetime.now()
 
-        if current.soc < bcfg.min_soc:
-            warnings.append(
-                f"SOC {current.soc:.1%} below limit {bcfg.min_soc:.1%}"
+        warnings = []
+        ok_parts = []
+        metrics = {"soc": round(current.soc * 100, 1)}
+        action_names = []
+
+        for key, spec in self._safety_metrics(config.battery).items():
+            value = spec["value"](current)
+            fmt, unit = spec["fmt"], spec.get("unit", "")
+            two_sided = spec["min"] is not None and spec["max"] is not None
+            margins = []
+
+            if spec["min"] is not None:
+                margin = value - spec["min"]
+                margins.append(margin)
+                metrics[f"min_{key}_margin" if two_sided else f"{key}_margin"] = round(margin, 4)
+                if margin < 0:
+                    warnings.append(
+                        f"{spec['label']} {value:{fmt}}{unit} below limit {spec['min']:{fmt}}{unit}"
+                    )
+                    action_names += spec["action"].get("min", [])
+
+            if spec["max"] is not None:
+                margin = spec["max"] - value
+                margins.append(margin)
+                metrics[f"max_{key}_margin"] = round(margin, 4)
+                if margin < 0:
+                    warnings.append(
+                        f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
+                    )
+                    action_names += spec["action"].get("max", [])
+
+            ok_parts.append(
+                f"{spec['label']} {value:{fmt}}{unit} (margin {min(margins):+{fmt}}{unit})"
             )
-            switch_off_AC = True
 
-        if current.battery_voltage < bcfg.min_voltage:
-            warnings.append(
-                f"voltage {current.battery_voltage:.2f}V below limit {bcfg.min_voltage:.1f}V"
-            )
-            switch_off_AC = True
-
-        if current.battery_voltage > bcfg.max_voltage:
-            warnings.append(
-                f"voltage {current.battery_voltage:.2f}V above limit {bcfg.max_voltage:.1f}V"
-            )
-            switch_off_AC = True
-
-        # Over/under-temperature: stop AC via multiplus
-        # (Solar MPPT chargers are not controllable in Phase 1)
-        if current.battery_temp < bcfg.min_temp:
-            warnings.append(
-                f"temperature {current.battery_temp:.1f}°C below limit {bcfg.min_temp:.0f}°C"
-            )
-            switch_off_AC = True
-
-        if current.battery_temp > bcfg.max_temp:
-            warnings.append(
-                f"temperature {current.battery_temp:.1f}°C above limit {bcfg.max_temp:.0f}°C"
-            )
-            switch_off_AC = True
-
-        if switch_off_AC:
-            reason = "; ".join(warnings)
-            already_acted = any(a.actuator == "multiplus_mode" for a in actions)
-            if actcfg.multiplus_mode and not already_acted:
+        actions = []
+        seen_actuators = set()
+        reason = "; ".join(warnings)
+        for name in action_names:
+            for actuator, act_value in ACTIONS[name](actcfg):
+                if actuator in seen_actuators:
+                    continue
+                seen_actuators.add(actuator)
                 actions.append(ScheduledAction(
                     execute_at=now,
-                    actuator="multiplus_mode",
-                    value=actcfg.multiplus_mode_off,
+                    actuator=actuator,
+                    value=act_value,
                     reason=reason,
                     agent=self.name,
                 ))
 
         if warnings:
-            rationale = "SAFETY ACTION: " + "; ".join(warnings)
+            rationale = "SAFETY ACTION: " + reason
         else:
-            rationale = (
-                f"OK — SOC {current.soc:.1%} (margin {soc_margin:+.1%}), "
-                f"voltage {current.battery_voltage:.2f}V (margin {voltage_margin:+.2f}V), "
-                f"temp {current.battery_temp:.1f}°C (margin {temp_margin:.1f}°C)"
-            )
+            rationale = "OK — " + ", ".join(ok_parts)
 
         return AgentResult(
             agent_name=self.name,

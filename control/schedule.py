@@ -7,7 +7,7 @@ from pathlib import Path
 @dataclass
 class ScheduledAction:
     execute_at: datetime
-    actuator: str   # "multiplus_mode" or "mppt100_load"
+    actuator: str   # "multiplus_mode", "mppt100_load", "wallbox_charge", or "ac_inverter_plug"
     value: int      # D-Bus value to write
     reason: str
     agent: str

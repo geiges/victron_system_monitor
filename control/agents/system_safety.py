@@ -99,11 +99,10 @@ class SystemSafetyAgent(BaseAgent):
         ok_parts = []
         metrics = dict()
         action_names = []
-
+        print(self._safety_metrics(config.battery))
         for key, spec in self._safety_metrics(config.battery).items():
             value = spec["value"](current)
             fmt, unit = spec["fmt"], spec.get("unit", "")
-            two_sided = spec["min"] is not None and spec["max"] is not None
             margins = []
             
             metrics[f"{key}_value"] = value
@@ -116,7 +115,7 @@ class SystemSafetyAgent(BaseAgent):
             if spec["min"] is not None:
                 margin = value - spec["min"]
                 margins.append(margin)
-                metrics[f"min_{key}_margin" if two_sided else f"{key}_margin"] = round(margin, 4)
+                metrics[f"min_{key}_margin"] = round(margin, 4)
                 if margin < 0:
                     warnings.append(
                         f"{spec['label']} {value:{fmt}}{unit} below limit {spec['min']:{fmt}}{unit}"

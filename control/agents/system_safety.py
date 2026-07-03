@@ -46,11 +46,11 @@ class SystemSafetyAgent(BaseAgent):
     def _safety_metrics(bcfg):
         return {
             "soc": {
-                "value": lambda s: s.soc,
+                "value": lambda s: s.soc*100,
                 "min": bcfg.min_soc,
                 "max": None,
                 "label": "SOC",
-                "fmt": ".1%",
+                "fmt": ".0%",
                 "action": {"min": _MIN_ACTIONS},
             },
             "voltage": {
@@ -89,7 +89,7 @@ class SystemSafetyAgent(BaseAgent):
 
         warnings = []
         ok_parts = []
-        metrics = {"soc": round(current.soc * 100, 1)}
+        metrics = dict()
         action_names = []
 
         for key, spec in self._safety_metrics(config.battery).items():
@@ -97,7 +97,8 @@ class SystemSafetyAgent(BaseAgent):
             fmt, unit = spec["fmt"], spec.get("unit", "")
             two_sided = spec["min"] is not None and spec["max"] is not None
             margins = []
-
+            
+            metrics[f"{key}_value"] =  value
             if spec["min"] is not None:
                 margin = value - spec["min"]
                 margins.append(margin)

@@ -152,6 +152,7 @@ def run_loop(config: ControlConfig) -> None:
             # Run mandatory safety agent
             result = safety_agent.run(state, config)
             results.append(result)
+            log.append_agent_result(result)
         except Exception as e:
             print(f"[runner] safety agent execution error: {e} — skipping cycle")
             _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)

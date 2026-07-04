@@ -171,25 +171,26 @@ class SystemSafetyAgent(BaseAgent):
                         f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
                     )
                     action_names += spec["action"].get("max", [])
-            
-            # cooling control
-            for key, spec in self._cooling_metrics(config.battery).items():
-                value = spec["value"](current)
-                fmt, unit = spec["fmt"], spec.get("unit", "")
-                
-                if spec["max"] is not None:
-                     margin = spec["max"] - value
-                     margins.append(margin)
-                     metrics[f"{key}_margin"] = round(margin, 4)
-                     if margin < 0:
-                         warnings.append(
-                             f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
-                         )
-                         action_names += spec["action"].get("max", [])
-                 
             ok_parts.append(
                 f"{spec['label']} {value:{fmt}}{unit} (margin {min(margins):+{fmt}}{unit})"
             )
+            
+        # cooling control
+        for key, spec in self._cooling_metrics(config.battery).items():
+            value = spec["value"](current)
+            fmt, unit = spec["fmt"], spec.get("unit", "")
+            
+            if spec["max"] is not None:
+                 margin = spec["max"] - value
+                 margins.append(margin)
+                 metrics[f"{key}_margin"] = round(margin, 4)
+                 if margin < 0:
+                     warnings.append(
+                         f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
+                     )
+                     action_names += spec["action"].get("max", [])
+             
+            
             
            
 

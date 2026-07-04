@@ -93,7 +93,7 @@ batt_config_V1 = {
     "min_safety_voltage" : 24.3,
     "max_safety_voltage" : 28.9,
     "min_safety_temperature" : 5,
-    "max_safety_temperature" : 45,
+    "max_safety_temperature" : 42.5,
     "max_safety_ac_load_w" : 2500,
 }
 

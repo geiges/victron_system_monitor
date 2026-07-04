@@ -22,6 +22,8 @@ class CurrentState:
     battery_temp: float     # °C
     solar_power_w: float    # W, sum of all MPPT yields
     ac_load_w: float        # W, multiplus AC output
+    mppt_150_power_w : float # W, mppt150 solar power input
+    mppt_100_power_w : float # W, mppt100 solar power input
     inverter_mode: Optional[int] = None   # D-Bus value: 3=on, 4=inverter-only
     mppt100_load_on: Optional[bool] = None
 

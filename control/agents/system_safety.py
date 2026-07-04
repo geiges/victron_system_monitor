@@ -40,7 +40,7 @@ ACTIONS = {
 _MIN_ACTIONS = ["switch_off_AC", "switch_off_DC_load"]
 _MAX_ACTIONS = ["switch_off_AC_mppt"]
 
-_FAN_ON_ACTION = ["switch_on_AC_mppt"]
+_FAN_ON_ACTION = ["switch_on_DC_load"]
 
 class SystemSafetyAgent(BaseAgent):
     name = "system_safety"

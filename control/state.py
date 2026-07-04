@@ -196,4 +196,6 @@ def read_current_state(data_dir: Path = Path("data")) -> CurrentState:
         battery_temp=float(state.get("system/battery_temperature", 25.0)),
         solar_power_w=_solar_power_from_state(state),
         ac_load_w=float(state.get("multiplus/AC_power_output", 0.0)),
+        mppt_150_power_w = float(state.get("mppt150/power_yield", 0.0)),
+        mppt_100_power_w = float(state.get("mppt100/power_yield", 0.0)),
     )

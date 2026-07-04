@@ -10,10 +10,15 @@ def _switch_off_ac(actcfg):
     return [("multiplus_mode", actcfg.multiplus_mode_off)]
 
 
-def _switch_dc_load(actcfg):
+def _switch_off_dc_load(actcfg):
     if not actcfg.mppt100_load:
         return []
     return [("mppt100_load", actcfg.mppt100_load_off)]
+
+def _switch_on_dc_load(actcfg):
+    if not actcfg.mppt100_load:
+        return []
+    return [("mppt100_load", actcfg.mppt100_load_on)]
 
 
 def _switch_off_ac_mppt(actcfg):
@@ -24,16 +29,18 @@ def _switch_off_ac_mppt(actcfg):
 
 ACTIONS = {
     "switch_off_AC": _switch_off_ac,
-    "switch_DC_load": _switch_dc_load,
+    "switch_off_DC_load": _switch_off_dc_load,
+    "switch_on_DC_load": _switch_on_dc_load,
     "switch_off_AC_mppt": _switch_off_ac_mppt,
 }
 
 # ponytail: one policy for every metric today — a low breach cuts what drains the
 # battery (AC inverter mode + DC load), a high breach hard-cuts AC via the smart
 # plug. Give a metric its own "action" dict when it needs to diverge.
-_MIN_ACTIONS = ["switch_off_AC", "switch_DC_load"]
+_MIN_ACTIONS = ["switch_off_AC", "switch_off_DC_load"]
 _MAX_ACTIONS = ["switch_off_AC_mppt"]
 
+_FAN_ON_ACTION = ["switch_on_AC_mppt"]
 
 class SystemSafetyAgent(BaseAgent):
     name = "system_safety"
@@ -88,7 +95,36 @@ class SystemSafetyAgent(BaseAgent):
                 "unit": "W",
                 "action": {"max": ["switch_off_AC"]},
                 },
+        
         }
+    def _cooloing_metrics(bcfg):
+        return {
+            "cooling_AC_load": {
+                "value": lambda s: s.ac_load_w,
+                "max": 1000,
+                "label": "AC cooling load",
+                "fmt": ".0%",
+                "unit": "W",
+                "action": {"max": _FAN_ON_ACTION},
+                },
+            "cooling_mppt150_power": {
+                "value": lambda s: s.mppt_150_power_w,
+                "max": 600,
+                "label": "MPPT150 cooling load",
+                "fmt": ".0%",
+                "unit": "W",
+                "action": {"max": _FAN_ON_ACTION},
+                },
+            "cooling_mppt100_power": {
+                "value": lambda s: s.mppt_100_power_w,
+                "max": 300,
+                "label": "MPPT100 cooling load",
+                "fmt": ".0%",
+                "unit": "W",
+                "action": {"max": _FAN_ON_ACTION},
+                },
+            }
+    
 
     def run(self, state, config) -> AgentResult:
         current = state
@@ -100,6 +136,8 @@ class SystemSafetyAgent(BaseAgent):
         metrics = dict()
         action_names = []
         print(self._safety_metrics(config.battery))
+        
+        #safety control
         for key, spec in self._safety_metrics(config.battery).items():
             value = spec["value"](current)
             fmt, unit = spec["fmt"], spec.get("unit", "")
@@ -131,10 +169,27 @@ class SystemSafetyAgent(BaseAgent):
                         f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
                     )
                     action_names += spec["action"].get("max", [])
-
+            
+            # cooling control
+            for key, spec in self._cooloing_metrics(config.battery).items():
+                value = spec["value"](current)
+                fmt, unit = spec["fmt"], spec.get("unit", "")
+                
+                if spec["max"] is not None:
+                     margin = spec["max"] - value
+                     margins.append(margin)
+                     metrics[f"{key}_margin"] = round(margin, 4)
+                     if margin < 0:
+                         warnings.append(
+                             f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
+                         )
+                         action_names += spec["action"].get("max", [])
+                 
             ok_parts.append(
                 f"{spec['label']} {value:{fmt}}{unit} (margin {min(margins):+{fmt}}{unit})"
             )
+            
+           
 
         actions = []
         seen_actuators = set()

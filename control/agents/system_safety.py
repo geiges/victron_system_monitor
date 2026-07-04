@@ -97,7 +97,9 @@ class SystemSafetyAgent(BaseAgent):
                 },
         
         }
-    def _cooloing_metrics(bcfg):
+    
+    @staticmethod
+    def _cooling_metrics(bcfg):
         return {
             "cooling_AC_load": {
                 "value": lambda s: s.ac_load_w,
@@ -171,7 +173,7 @@ class SystemSafetyAgent(BaseAgent):
                     action_names += spec["action"].get("max", [])
             
             # cooling control
-            for key, spec in self._cooloing_metrics(config.battery).items():
+            for key, spec in self._cooling_metrics(config.battery).items():
                 value = spec["value"](current)
                 fmt, unit = spec["fmt"], spec.get("unit", "")
                 

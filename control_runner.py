@@ -131,6 +131,7 @@ def run_loop(config: ControlConfig) -> None:
     while True:
         t_start = datetime.now()
         results = []
+        print(t_start)
 
         # Reload config each cycle so REST API edits take effect
         try:
@@ -152,6 +153,7 @@ def run_loop(config: ControlConfig) -> None:
             # Run mandatory safety agent
             result = safety_agent.run(state, config)
             results.append(result)
+            print(f"[{result.agent_name}] {result.rationale}")
             log.append_agent_result(result)
         except Exception as e:
             print(f"[runner] safety agent execution error: {e} — skipping cycle")

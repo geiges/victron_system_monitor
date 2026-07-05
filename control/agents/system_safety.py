@@ -206,6 +206,7 @@ class SystemSafetyAgent(BaseAgent):
                     warnings.append(
                           f"{spec['label']} at cooling level {self.heat_memory}/{spec['n_req']}"  
                     )
+                    print(f"{spec['label']} at cooling level {self.heat_memory}/{spec['n_req']}" )
                 
             
             

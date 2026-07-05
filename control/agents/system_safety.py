@@ -143,7 +143,7 @@ class SystemSafetyAgent(BaseAgent):
         ok_parts = []
         metrics = dict()
         action_names = []
-        print(self._safety_metrics(config.battery))
+        #print(self._safety_metrics(config.battery))
         
         #safety control
         for key, spec in self._safety_metrics(config.battery).items():
@@ -199,7 +199,7 @@ class SystemSafetyAgent(BaseAgent):
                      
                  if self.heat_memory[key] == spec["n_req"]:
                     warnings.append(
-                        f"{spec['label']} heat limit reached;"
+                        f"{spec['label']} heat limit reached"
                     )
                     action_names += spec["action"].get("max", [])
                  elif self.heat_memory[key] > 0:

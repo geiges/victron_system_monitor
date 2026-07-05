@@ -204,9 +204,9 @@ class SystemSafetyAgent(BaseAgent):
                     action_names += spec["action"].get("max", [])
                  elif self.heat_memory[key] > 0:
                     warnings.append(
-                          f"{spec['label']} at cooling level {self.heat_memory}/{spec['n_req']}"  
+                          f"{spec['label']} at cooling level {self.heat_memory[key]}/{spec['n_req']}"  
                     )
-                    print(f"{spec['label']} at cooling level {self.heat_memory}/{spec['n_req']}" )
+                    print(f"{spec['label']} at cooling level {self.heat_memory[key]}/{spec['n_req']}" )
                 
             
             

@@ -45,6 +45,9 @@ _FAN_ON_ACTION = ["switch_on_DC_load"]
 class SystemSafetyAgent(BaseAgent):
     name = "system_safety"
     fast_cycle = True
+    
+    heat_memory= dict(cooling_mppt150_power=0, cooling_mppt100_power=0,
+                      cooling_AC_load=0)
 
     def is_enabled(self, config) -> bool:
         True
@@ -108,6 +111,7 @@ class SystemSafetyAgent(BaseAgent):
                 "fmt": ".0f",
                 "unit": "W",
                 "action": {"max": _FAN_ON_ACTION},
+                "n_req" : 6,
                 },
             "cooling_mppt150_power": {
                 "value": lambda s: s.mppt_150_power_w,
@@ -116,6 +120,7 @@ class SystemSafetyAgent(BaseAgent):
                 "fmt": ".0f",
                 "unit": "W",
                 "action": {"max": _FAN_ON_ACTION},
+                "n_req" : 30,
                 },
             "cooling_mppt100_power": {
                 "value": lambda s: s.mppt_100_power_w,
@@ -124,6 +129,7 @@ class SystemSafetyAgent(BaseAgent):
                 "fmt": ".0f",
                 "unit": "W",
                 "action": {"max": _FAN_ON_ACTION},
+                "n_req" : 30,
                 },
             }
     
@@ -185,11 +191,22 @@ class SystemSafetyAgent(BaseAgent):
                  margins.append(margin)
                  metrics[f"{key}_margin"] = round(margin, 4)
                  if margin < 0:
-                     warnings.append(
-                         f"{spec['label']} {value:{fmt}}{unit} above limit {spec['max']:{fmt}}{unit}"
-                     )
-                     action_names += spec["action"].get("max", [])
-             
+                     
+                     self.heat_memory[key] = min( self.heat_memory[key] + 1, spec["n_req"]) 
+                 else:
+                     self.heat_memory[key] = max( self.heat_memory[key] - 1, 0)
+                 
+                     
+                 if self.heat_memory[key] == spec["n_req"]:
+                    warnings.append(
+                        f"{spec['label']} heat limit reached;"
+                    )
+                    action_names += spec["action"].get("max", [])
+                 elif self.heat_memory[key] > 0:
+                    warnings.append(
+                          f"{spec['label']} at cooling level {self.heat_memory}/{spec['n_req']}"  
+                    )
+                
             
             
            

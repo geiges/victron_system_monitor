@@ -87,6 +87,7 @@ def minutes_at_full_soc(
         return None
 
     now = _now or datetime.now(tz=timezone)
+    now = now.replace(tzinfo=None)
     latest = sim_files[-1]
     date_str = latest.stem.replace("sim_", "")
     try:

@@ -104,7 +104,7 @@ def test_plan_day_weak_solar_still_charges_if_day_reaches_full_soc():
     wallbox must still schedule some charging if the (already high) starting
     SOC means the battery tops out and curtails anyway — a whole-day
     mismatch-cost comparison alone always favored "no charge" here, silently
-    wasting the curtailed hours (see MIN_CHARGE_FRACTION)."""
+    wasting the curtailed hours (see _min_charge_duration)."""
     battery = make_battery(_CFG)
     solar_w = [300.0] * 24  # peak 300W, nowhere near the ~1720W wallbox draw
     choice, end_soc = _plan_day(

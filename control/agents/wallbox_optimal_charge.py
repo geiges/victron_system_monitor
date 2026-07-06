@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -71,22 +72,21 @@ def _simulate_day(battery, solar_w: list[float], base_load_w: float, wallbox_w: 
     return min_soc, battery.state_of_charge
 
 
-MIN_CHARGE_FRACTION = 0.5  # on a day that reaches 100% SOC, at least this
-# fraction of the full-power hours needed to absorb the otherwise-curtailed
-# solar must be scheduled — "no charge" is not a candidate on such a day.
-
-
-def _wasted_wh(battery, solar_w: list[float], base_load_w: float, start_soc: float) -> float:
-    """Solar (Wh) that curtails to waste if the wallbox never runs: the
-    surplus during hours where the no-wallbox simulation is already pinned
-    at 100% SOC."""
+def _min_charge_duration(battery, solar_w: list[float], base_load_w: float,
+                          wallbox_w: float, start_soc: float) -> int:
+    """Minimum wallbox-on duration (hours) required this day: the full-power
+    hours needed to consume the day's total curtailed (wasted) solar energy,
+    rounded up. 0 if the day never reaches 100% SOC (no curtailment)."""
     trace: list[float] = []
     _simulate_day(battery, solar_w, base_load_w, 0.0, 0, 0, start_soc, trace=trace)
-    return sum(
+    wasted_wh = sum(
         max(0.0, solar - base_load_w)
         for solar, soc in zip(solar_w, trace)
         if soc >= 0.999
     )
+    if wasted_wh <= 0:
+        return 0
+    return math.ceil(wasted_wh / wallbox_w)
 
 
 def _plan_day(battery, solar_w: list[float], base_load_w: float, wallbox_w: float,
@@ -103,13 +103,12 @@ def _plan_day(battery, solar_w: list[float], base_load_w: float, wallbox_w: floa
     — a whole-day mismatch-cost comparison otherwise always favors accepting
     curtailment over the (larger, but harmless given ample floor headroom)
     mismatch of running the wallbox on weak-solar days, which would silently
-    waste hours of curtailed solar. See _wasted_wh.
+    waste hours of curtailed solar. See _min_charge_duration.
     """
     n = len(solar_w)
-    wasted_wh = _wasted_wh(battery, solar_w, base_load_w, start_soc)
-    if wasted_wh > 0:
-        hours_to_absorb = wasted_wh / wallbox_w
-        min_duration = min(n, max(1, round(MIN_CHARGE_FRACTION * hours_to_absorb)))
+    min_duration = _min_charge_duration(battery, solar_w, base_load_w, wallbox_w, start_soc)
+    if min_duration > 0:
+        min_duration = min(n, min_duration)
         candidates = [
             (start, duration)
             for start in range(n)

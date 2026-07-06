@@ -159,7 +159,7 @@ class ActuatorsConfig:
 class ControlConfig:
     safety_interval_seconds: int = 60
     control_interval_seconds: int = 300
-    horizon_hours: int = 48
+    horizon_hours: int = 96
     estimated_load_w: float = 20.0
     battery: BatteryConfig = field(default_factory=BatteryConfig)
     forecast: ForecastConfig = field(default_factory=ForecastConfig)

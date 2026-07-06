@@ -35,6 +35,7 @@ class ForecastConfig:
     endpoint_id: str = "homesolar"
     mppt150_file: str = "forecast_solar_yield_5312439980_mppt150.csv"
     mppt100_file: str = "forecast_solar_yield_5312439980_mppt100.csv"
+    mppt_AC_file: str = "forecast_solar_yield_5312439980_balcony.csv"
     cache_minutes: int = 60
     max_age_hours: int = 6
 

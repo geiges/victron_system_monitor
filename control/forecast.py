@@ -17,10 +17,11 @@ class HourlyEntry:
     time: datetime
     mppt150_w: float
     mppt100_w: float
+    mppt_AC_w: float = 0.0
 
     @property
     def total_w(self) -> float:
-        return self.mppt150_w + self.mppt100_w
+        return self.mppt150_w + self.mppt100_w + self.mppt_AC_w
 
 
 @dataclass
@@ -73,13 +74,14 @@ def _parse_csv(text: str) -> dict:
     return result
 
 
-def _merge(mppt150: dict, mppt100: dict) -> list:
-    times = sorted(set(mppt150) | set(mppt100))
+def _merge(mppt150: dict, mppt100: dict, mppt_AC: dict) -> list:
+    times = sorted(set(mppt150) | set(mppt100) | set(mppt_AC))
     return [
         HourlyEntry(
             time=t,
             mppt150_w=mppt150.get(t, 0.0),
             mppt100_w=mppt100.get(t, 0.0),
+            mppt_AC_w=mppt_AC.get(t, 0.0),
         )
         for t in times
     ]
@@ -115,8 +117,12 @@ class SolarForecastProvider:
 
         mppt150_text = self._get_file(f"{base}/files/{ep}/{self._cfg.mppt150_file}")
         mppt100_text = self._get_file(f"{base}/files/{ep}/{self._cfg.mppt100_file}")
+        mppt_AC_text = self._get_file(f"{base}/files/{ep}/{self._cfg.mppt_AC_file}")
 
-        entries = _merge(_parse_csv(mppt150_text), _parse_csv(mppt100_text))
+        
+        entries = _merge(_parse_csv(mppt150_text), 
+                         _parse_csv(mppt100_text),
+                         _parse_csv(mppt_AC_text))
         return SolarForecast(fetched_at=datetime.now(), entries=entries)
 
     def _get_file(self, url: str) -> str:

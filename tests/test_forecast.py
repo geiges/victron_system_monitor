@@ -66,7 +66,7 @@ def test_parse_csv_parses_all_non_empty():
 def test_merge_sums_arrays():
     m150 = _parse_csv(MPPT150_CSV)
     m100 = _parse_csv(MPPT100_CSV)
-    entries = _merge(m150, m100)
+    entries = _merge(m150, m100, {})
     totals = {e.time: e.total_w for e in entries}
 
     t12 = datetime(2026, 6, 17, 12, 0, 0)
@@ -76,7 +76,7 @@ def test_merge_sums_arrays():
 def test_merge_union_of_times():
     m150 = _parse_csv(MPPT150_CSV)
     m100 = _parse_csv(MPPT100_CSV)
-    entries = _merge(m150, m100)
+    entries = _merge(m150, m100, {})
     times = {e.time for e in entries}
     # 21:00 only in mppt150; all mppt100 times present
     assert datetime(2026, 6, 17, 21, 0, 0) in times

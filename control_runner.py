@@ -53,7 +53,7 @@ def _load_agents():
         SocWallboxChargeAgent(DATA_DIR),
         TimeBasedAgent(),
         ForecastWallboxAgent(),
-        WallboxOptimalChargeAgent(),
+        WallboxOptimalChargeAgent(DATA_DIR),
     ]
 
 

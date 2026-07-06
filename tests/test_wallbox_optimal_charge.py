@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 from control.config import ControlConfig
@@ -98,6 +99,23 @@ def test_plan_day_full_soc_still_charges_during_surplus():
     assert duration > 0
 
 
+def test_plan_day_weak_solar_still_charges_if_day_reaches_full_soc():
+    """Regression: a day whose peak solar never comes close to covering the
+    wallbox must still schedule some charging if the (already high) starting
+    SOC means the battery tops out and curtails anyway — a whole-day
+    mismatch-cost comparison alone always favored "no charge" here, silently
+    wasting the curtailed hours (see MIN_CHARGE_FRACTION)."""
+    battery = make_battery(_CFG)
+    solar_w = [300.0] * 24  # peak 300W, nowhere near the ~1720W wallbox draw
+    choice, end_soc = _plan_day(
+        battery, solar_w, base_load_w=20.0, wallbox_w=1600.0,
+        min_storage_fraction=0.25, start_soc=0.95,
+    )
+    assert choice is not None
+    start, duration = choice
+    assert duration >= 1
+
+
 def test_plan_day_low_solar_picks_no_charge():
     battery = make_battery(_CFG)
     solar_w = [50.0] * 24  # well below base load, never worth activating
@@ -146,19 +164,49 @@ def test_plan_day_rejects_floor_breaching_full_day_window():
 # WallboxOptimalChargeAgent — integration
 # ---------------------------------------------------------------------------
 
-def test_agent_inactive_without_forecast():
-    result = WallboxOptimalChargeAgent().run(_projection(0.5, None), _CFG)
+def test_agent_inactive_without_forecast(tmp_path):
+    result = WallboxOptimalChargeAgent(tmp_path).run(_projection(0.5, None), _CFG)
     assert result.actions == []
     assert "no solar forecast" in result.rationale
 
 
-def test_agent_emits_actions_for_planned_window():
+def test_agent_dispatches_via_sequence_not_bare_actuator(tmp_path):
+    """The agent must request the staged wallbox_on/wallbox_off sequences
+    (inverter + DC load + wallbox, with verification) rather than writing the
+    wallbox_charge actuator directly."""
     now = datetime.now().replace(minute=0, second=0, microsecond=0)
     hourly_w = [0.0] * 6 + [3000.0] * 6 + [0.0] * 12  # surplus 6h from now
     forecast = _forecast(hourly_w, start=now)
-    result = WallboxOptimalChargeAgent().run(_projection(0.5, forecast), _CFG)
+    result = WallboxOptimalChargeAgent(tmp_path).run(_projection(0.5, forecast), _CFG)
     assert result.metrics["planned_windows"] >= 1
-    actuators = {a.actuator for a in result.actions}
-    assert actuators == {"wallbox_charge"}
-    # keepalive action for "now" must always be present
-    assert any(a.reason.startswith(("inside", "outside")) for a in result.actions)
+    assert result.actions == []  # no bare actuator writes
+    assert len(result.sequences) == 1
+    intent = result.sequences[0]
+    assert intent.sequence_name == "wallbox_off"  # "now" (start of forecast) is outside the window
+    assert intent.agent == "wallbox_optimal_charge"
+
+
+def test_agent_requests_wallbox_on_sequence_inside_window(tmp_path):
+    now = datetime.now().replace(minute=0, second=0, microsecond=0)
+    hourly_w = [3000.0] * 24  # surplus right now too
+    forecast = _forecast(hourly_w, start=now)
+    result = WallboxOptimalChargeAgent(tmp_path).run(_projection(0.5, forecast), _CFG)
+    assert len(result.sequences) == 1
+    assert result.sequences[0].sequence_name == "wallbox_on"
+
+
+def test_agent_saves_schedule_file(tmp_path):
+    now = datetime.now().replace(minute=0, second=0, microsecond=0)
+    hourly_w = [0.0] * 6 + [3000.0] * 6 + [0.0] * 12
+    forecast = _forecast(hourly_w, start=now)
+    cfg = ControlConfig()
+    WallboxOptimalChargeAgent(tmp_path).run(_projection(0.5, forecast), cfg)
+
+    path = tmp_path / "wallbox_optimal_charge_schedule.json"
+    assert path.exists()
+    payload = json.loads(path.read_text())
+    assert payload["wallbox_power_w"] == cfg.agents.wallbox_optimal_charge.wallbox_power_w
+    assert len(payload["rows"]) == cfg.agents.wallbox_optimal_charge.horizon_days * 24
+    row = payload["rows"][0]
+    assert set(row) == {"time", "solar_w", "wallbox_on", "projected_soc"}
+    assert any(r["wallbox_on"] for r in payload["rows"])

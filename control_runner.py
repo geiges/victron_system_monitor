@@ -48,10 +48,12 @@ def _load_agents():
     from control.agents.time_based import TimeBasedAgent
     from control.agents.soc_wallbox_charge import SocWallboxChargeAgent
     from control.agents.forecast_wallbox import ForecastWallboxAgent
+    from control.agents.wallbox_optimal_charge import WallboxOptimalChargeAgent
     return [
         SocWallboxChargeAgent(DATA_DIR),
         TimeBasedAgent(),
         ForecastWallboxAgent(),
+        WallboxOptimalChargeAgent(),
     ]
 
 

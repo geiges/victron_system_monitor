@@ -29,7 +29,7 @@ class SystemProjection:
     steps: list  # list[ProjectedStep]
 
 
-def _make_battery(cfg) -> Battery:
+def make_battery(cfg) -> Battery:
     return Battery(
         total_capacity=cfg.battery.capacity_ah,
         R0=cfg.battery.r0,
@@ -49,7 +49,7 @@ def _ceil_to_quarter(t: datetime) -> datetime:
     return t_min + timedelta(minutes=(15 - remainder))
 
 
-def _step_soc(battery: Battery, solar_w: float, load_w: float, dt_seconds: float) -> float:
+def step_soc(battery: Battery, solar_w: float, load_w: float, dt_seconds: float) -> float:
     """Advance battery SOC by dt_seconds given net power flows.
 
     Sign convention: positive current = charging (matches Victron/simulation.py).
@@ -81,7 +81,7 @@ class BatteryProjector:
         (e.g. wallbox draw derived from a scheduled action timeline).
         """
         cfg = self._config
-        battery = _make_battery(cfg)
+        battery = make_battery(cfg)
         battery.set_state_of_charge(current.soc)
 
         dt_seconds = STEP_MINUTES * 60
@@ -94,7 +94,7 @@ class BatteryProjector:
             solar_w = forecast.get_power(t) if forecast is not None else 0.0
             extra_w = extra_load_fn(t) if extra_load_fn is not None else 0.0
             load_w = cfg.estimated_load_w + extra_w
-            soc = _step_soc(battery, solar_w, load_w, dt_seconds)
+            soc = step_soc(battery, solar_w, load_w, dt_seconds)
             steps.append(ProjectedStep(
                 time=t,
                 solar_w=solar_w,

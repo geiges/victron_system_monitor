@@ -146,10 +146,13 @@ def get_log():
 
 # Agents that are mutually exclusive: enabling one disables the others in the same group.
 _AGENT_GROUPS: list[list[str]] = [
-    ["soc_wallbox_charge", "forecast_wallbox"],
+    ["soc_wallbox_charge", "forecast_wallbox", "wallbox_optimal_charge"],
 ]
 
-_KNOWN_AGENTS = ["system_safety", "time_based", "soc_wallbox_charge", "forecast_wallbox"]
+_KNOWN_AGENTS = [
+    "system_safety", "time_based", "soc_wallbox_charge", "forecast_wallbox",
+    "wallbox_optimal_charge",
+]
 
 
 @control_bp.get("/agents")

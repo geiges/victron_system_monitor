@@ -86,6 +86,20 @@ class ForecastWallboxConfig:
 
 
 @dataclass
+class WallboxOptimalChargeConfig:
+    enabled: bool = False
+    wallbox_power_w: float = 1600.0
+    inverter_efficiency: float = 0.93
+    horizon_days: int = 4
+    min_storage_fraction: float = 0.25
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "WallboxOptimalChargeConfig":
+        valid = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in d.items() if k in valid})
+
+
+@dataclass
 class SocWallboxChargeConfig:
     enabled: bool = True
     soc_on_threshold: float = 0.99   # SOC considered "full"
@@ -104,6 +118,7 @@ class AgentsConfig:
     time_based: TimeBasedConfig = field(default_factory=TimeBasedConfig)
     soc_wallbox_charge: SocWallboxChargeConfig = field(default_factory=SocWallboxChargeConfig)
     forecast_wallbox: ForecastWallboxConfig = field(default_factory=ForecastWallboxConfig)
+    wallbox_optimal_charge: WallboxOptimalChargeConfig = field(default_factory=WallboxOptimalChargeConfig)
 
     @classmethod
     def from_dict(cls, d: dict) -> "AgentsConfig":
@@ -112,6 +127,7 @@ class AgentsConfig:
             time_based=TimeBasedConfig.from_dict(d.get("time_based", {})),
             soc_wallbox_charge=SocWallboxChargeConfig.from_dict(d.get("soc_wallbox_charge", {})),
             forecast_wallbox=ForecastWallboxConfig.from_dict(d.get("forecast_wallbox", {})),
+            wallbox_optimal_charge=WallboxOptimalChargeConfig.from_dict(d.get("wallbox_optimal_charge", {})),
         )
 
 

@@ -5,7 +5,7 @@ import pytest
 from control.config import ControlConfig
 from control.forecast import SolarForecast, HourlyEntry
 from control.projection import (
-    BatteryProjector, STEP_MINUTES, _step_soc, _ceil_to_quarter,
+    BatteryProjector, STEP_MINUTES, step_soc, _ceil_to_quarter,
 )
 from control.state import CurrentState
 from battery import Battery
@@ -76,28 +76,28 @@ def test_ceil_to_quarter_returns_datetime_without_seconds():
 def test_step_soc_increases_when_solar_exceeds_load():
     battery = Battery(total_capacity=210, R0=0.01, R1=0.04, C1=2000, cells=8)
     battery.set_state_of_charge(0.5)
-    new_soc = _step_soc(battery, solar_w=1000.0, load_w=200.0, dt_seconds=_STEP_S)
+    new_soc = step_soc(battery, solar_w=1000.0, load_w=200.0, dt_seconds=_STEP_S)
     assert new_soc > 0.5
 
 
 def test_step_soc_decreases_when_only_load():
     battery = Battery(total_capacity=210, R0=0.01, R1=0.04, C1=2000, cells=8)
     battery.set_state_of_charge(0.5)
-    new_soc = _step_soc(battery, solar_w=0.0, load_w=200.0, dt_seconds=_STEP_S)
+    new_soc = step_soc(battery, solar_w=0.0, load_w=200.0, dt_seconds=_STEP_S)
     assert new_soc < 0.5
 
 
 def test_step_soc_clamps_at_zero():
     battery = Battery(total_capacity=210, R0=0.01, R1=0.04, C1=2000, cells=8)
     battery.set_state_of_charge(0.0)
-    new_soc = _step_soc(battery, solar_w=0.0, load_w=5000.0, dt_seconds=_STEP_S)
+    new_soc = step_soc(battery, solar_w=0.0, load_w=5000.0, dt_seconds=_STEP_S)
     assert new_soc == pytest.approx(0.0)
 
 
 def test_step_soc_clamps_at_one():
     battery = Battery(total_capacity=210, R0=0.01, R1=0.04, C1=2000, cells=8)
     battery.set_state_of_charge(1.0)
-    new_soc = _step_soc(battery, solar_w=100_000.0, load_w=0.0, dt_seconds=_STEP_S)
+    new_soc = step_soc(battery, solar_w=100_000.0, load_w=0.0, dt_seconds=_STEP_S)
     assert new_soc == pytest.approx(1.0)
 
 

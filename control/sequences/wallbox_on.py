@@ -51,7 +51,7 @@ class WallboxOnSequence(Sequence):
                 name="dc_load_on",
                 action_fn=lambda: _now_action("mppt100_load", load_on),
                 verify=lambda: (
-                    (i := dbus_read_value(mppt100_svc, "/Load/I")) is not None and i > 0.1
+                    (i := dbus_read_value(mppt100_svc, "/Load/I")) is not None and i >= 0.1
                 ) if mppt100_svc else False,
                 max_retries=5,
             ),

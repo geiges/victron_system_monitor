@@ -111,7 +111,7 @@ class SystemSafetyAgent(BaseAgent):
                 "fmt": ".0f",
                 "unit": "W",
                 "action": {"max": _FAN_ON_ACTION},
-                "n_req" : 6,
+                "n_req" : 1,
                 },
             "cooling_mppt150_power": {
                 "value": lambda s: s.mppt_150_power_w,
@@ -120,7 +120,7 @@ class SystemSafetyAgent(BaseAgent):
                 "fmt": ".0f",
                 "unit": "W",
                 "action": {"max": _FAN_ON_ACTION},
-                "n_req" : 30,
+                "n_req" : 10,
                 },
             "cooling_mppt100_power": {
                 "value": lambda s: s.mppt_100_power_w,
@@ -129,7 +129,7 @@ class SystemSafetyAgent(BaseAgent):
                 "fmt": ".0f",
                 "unit": "W",
                 "action": {"max": _FAN_ON_ACTION},
-                "n_req" : 30,
+                "n_req" : 10,
                 },
             }
     

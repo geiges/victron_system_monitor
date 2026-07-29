@@ -73,7 +73,7 @@ class AggregationLogger():
         lastRow = data[-1]
         
         
-        last_date_str =  lastRow.split(',')[0]
+        last_date_str =  lastRow.split(',')[0].split(' ')[0]
         return last_date_str
 
     def _compute_aux_aggregates(self, file):

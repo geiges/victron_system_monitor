@@ -88,7 +88,7 @@ measurement_components = {
 
 # Battery Simulation configuration
 batt_config_V1 = {
-    "Q_tot" : 210,
+    "Q_tot" : 310,
     "R0" : 0.01,
     "R1" : 0.04,
     "C1" : 2000,

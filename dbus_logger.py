@@ -204,6 +204,7 @@ class AggregationLogger():
     def update_daily_aggregates(self, date_str):
         
         if self.last_date_str != date_str:
+            print(f"last_date_str: {self.last_date_str}")
             
             time_delta = str2datetime(date_str) - str2datetime(self.last_date_str)
             base = str2datetime(self.last_date_str)

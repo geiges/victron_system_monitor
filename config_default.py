@@ -61,7 +61,16 @@ system_components = [
     components.VictronPhoenix24_800('Phoenix Inverter 24V 800VA 230V', 
                                     short_name='phoenix',
                                     const_consumption=0.1
-                                    )
+                                    ),
+    components.OneWireTemperatureSensor(product_name='1Wire Sensor 28-000000c8e009', 
+                                        short_name = 'temperature_DC_multiplus', 
+                                        ),
+    components.OneWireTemperatureSensor(product_name='1Wire Sensor 28-0000002146e4', 
+                                        short_name = 'temperature_shunt', 
+                                        ),
+    components.OneWireTemperatureSensor(product_name='1Wire Sensor 28-000000228b7c', 
+                                        short_name = 'temperature_inside', 
+                                        ),
     ]
 
 # system connectors (relevant for measurements)
@@ -111,6 +120,11 @@ aux_components = [
         short_name='ac_inverter',
         url='http://tasmota-156ecf-3791',
         fallback_url='http://192.168.1.60',
+    ),
+    aux_comp.TasmotaSmartPlug(
+        short_name='ac_aux',
+        url='http://tasmota-4ec02b-0043',
+        fallback_url='http://192.168.1.249',
     ),
     aux_comp.DeyeSunInverter(
         short_name='ac_mppt',

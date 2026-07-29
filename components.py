@@ -133,6 +133,7 @@ class BaseComponent(object):
                         'unit' : variable.unit},
                     })
             return variables
+    
     def get_device_states(self,dbus):
         """
         Returns a dictionary of all implemented variables for this device
@@ -151,6 +152,7 @@ class BaseComponent(object):
                         'mapping' : variable.mapping},
                     })
             return variables        
+    
     def init_measurement_correction(self, connector_R0, voltage_offset):
         """
         Set connector resistance of cable connection and voltage offset in order
@@ -169,12 +171,12 @@ class BaseComponent(object):
         ----------
         raw_voltage_value : float
             
-        current : flaot
+        current : float
             
 
         Returns
         -------
-        voltage : flaot
+        voltage : float
 
         """
         if self.connector_R0 is None:
@@ -182,7 +184,19 @@ class BaseComponent(object):
         else:
              voltage = raw_voltage_value - (self.connector_R0 * current) + self.voltage_offset
         return voltage
-            
+
+class OneWireTemperatureSensor(BaseComponent):
+    component_variables =[
+        VariableType(basename = "temperature", subaddress = "/Temperature", unit='°C'),
+        # VariableType(basename = "connected", subaddress = "/Connected", unit=''),
+        # VariableType(basename = "status", subaddress = "/Status", unit=''),
+        ]
+    
+
+    def __init__(self, product_name, short_name, const_consumption=0.0):
+
+        component_type ='com.victronenergy.temperature'
+        super().__init__(product_name, short_name, component_type, const_consumption)    
 
 class VictronSystem(BaseComponent):
     """
@@ -193,6 +207,7 @@ class VictronSystem(BaseComponent):
         VariableType(basename = "battery_current", subaddress = "/Dc/Battery/Current", unit='A'),
         VariableType(basename = "battery_temperature", subaddress = "/Dc/Battery/Temperature", unit='°C'),
         ]
+    
     
     def __init__(self, product_name, short_name, const_consumption=0.0):
 

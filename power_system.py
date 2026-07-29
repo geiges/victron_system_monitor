@@ -58,7 +58,7 @@ class Power_system(dict):
                 variables_of_device = component.get_device_variables(dbus)
                 # component is currently connected
                 variables_to_log.update(variables_of_device)
-                print(f"The following variables are loged fro device {component}:")
+                print(f"The following variables are logged from device {component}:")
                 print(variables_of_device)
             else:
                 missing_components.append(component)

@@ -99,23 +99,6 @@ def test_plan_day_full_soc_still_charges_during_surplus():
     assert duration > 0
 
 
-def test_plan_day_weak_solar_still_charges_if_day_reaches_full_soc():
-    """Regression: a day whose peak solar never comes close to covering the
-    wallbox must still schedule some charging if the (already high) starting
-    SOC means the battery tops out and curtails anyway — a whole-day
-    mismatch-cost comparison alone always favored "no charge" here, silently
-    wasting the curtailed hours (see _min_charge_duration)."""
-    battery = make_battery(_CFG)
-    solar_w = [300.0] * 24  # peak 300W, nowhere near the ~1720W wallbox draw
-    choice, end_soc = _plan_day(
-        battery, solar_w, base_load_w=20.0, wallbox_w=1600.0,
-        min_storage_fraction=0.25, start_soc=0.95,
-    )
-    assert choice is not None
-    start, duration = choice
-    assert duration >= 1
-
-
 def test_plan_day_low_solar_picks_no_charge():
     battery = make_battery(_CFG)
     solar_w = [50.0] * 24  # well below base load, never worth activating

@@ -146,11 +146,11 @@ def run_loop(config: ControlConfig) -> None:
 
         try:
             state = read_current_state(DATA_DIR)
-        except StateUnavailableError as exc:
+        except Exception as exc:
             print(f"[runner] state unavailable: {exc} — skipping cycle")
             _sleep_with_sequence_ticks(t_start, config.safety_interval_seconds, sequence_runner, config)
             continue
-
+        
         try:
             # Run mandatory safety agent
             result = safety_agent.run(state, config)

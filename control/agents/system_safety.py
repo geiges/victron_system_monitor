@@ -55,16 +55,16 @@ class SystemSafetyAgent(BaseAgent):
     @staticmethod
     def _safety_metrics(bcfg):
         return {
-            "soc": {
-                "value": lambda s: s.soc*100,
-                "min": bcfg.min_soc,
-                "warn_min": .25,
-                "warn_max" : None,
-                "max": None,
-                "label": "SOC",
-                "fmt": ".0%",
-                "action": {"min": _MIN_ACTIONS},
-            },
+            # "soc": {
+            #     "value": lambda s: s.soc*100,
+            #     "min": bcfg.min_soc,
+            #     "warn_min": .25,
+            #     "warn_max" : None,
+            #     "max": None,
+            #     "label": "SOC",
+            #     "fmt": ".0%",
+            #     "action": {"min": _MIN_ACTIONS},
+            # },
             "voltage": {
                 "value": lambda s: s.battery_voltage,
                 "min": bcfg.min_voltage,
